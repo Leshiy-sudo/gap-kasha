@@ -16,3 +16,6 @@ captures/
 keystore/
 screens/
 tmp_uidump.xml
+
+.ksp/
+.kotlin/
