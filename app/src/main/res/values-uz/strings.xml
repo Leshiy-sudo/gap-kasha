@@ -1,0 +1,117 @@
+<resources>
+    <string name="app_name">Gap Kassa</string>
+
+    <string name="auth_title">Kirish</string>
+    <string name="auth_subtitle">Badallar va rotatsiyani bitta joyda boshqaring</string>
+    <string name="register_title">Ro’yxatdan o’tish</string>
+    <string name="section_personal">Shaxsiy ma’lumotlar</string>
+    <string name="section_contacts">Kontaktlar</string>
+    <string name="section_security">Xavfsizlik</string>
+    <string name="rooms_title">Guruhlar</string>
+    <string name="create_room_title">Guruh yaratish</string>
+    <string name="section_main">Asosiy</string>
+    <string name="section_finance">Moliyaviy parametrlar</string>
+    <string name="section_settings">Sozlamalar</string>
+    <string name="section_participants">Ishtirokchilar</string>
+    <string name="helper_participants">Emailni vergul orqali kiriting</string>
+    <string name="calendar_title">Kalendar</string>
+    <string name="payment_detail_title">To’lov tafsilotlari</string>
+    <string name="stats_title">Statistika</string>
+    <string name="profile_title">Profil</string>
+
+    <string name="field_name">Ism</string>
+    <string name="field_email">Email</string>
+    <string name="field_phone">Telefon</string>
+    <string name="field_password">Parol</string>
+    <string name="field_confirm_password">Parolni tasdiqlang</string>
+    <string name="field_room_name">Nomi</string>
+    <string name="field_room_description">Tavsif</string>
+    <string name="field_amount">Badal summasi</string>
+    <string name="field_payment_day">To’lov kuni</string>
+    <string name="field_cycle_length">Muddat (oy)</string>
+    <string name="field_auto_rotate">Avto-rotatsiya</string>
+    <string name="field_participants">Ishtirokchilar (email, vergul bilan)</string>
+    <string name="field_photo_url">Foto (URL)</string>
+
+    <string name="action_login">Kirish</string>
+    <string name="action_register">Ro’yxatdan o’tish</string>
+    <string name="action_forgot_password">Parolni unutdingizmi?</string>
+    <string name="action_create_account">Hisob yaratish</string>
+    <string name="action_back">Orqaga</string>
+    <string name="action_create">Yaratish</string>
+    <string name="action_calendar">Kalendar</string>
+    <string name="action_stats">Statistika</string>
+    <string name="action_paid">To’landi</string>
+    <string name="action_skipped">O’tkazib yuborildi</string>
+    <string name="action_export_csv">CSV eksport</string>
+    <string name="action_save">Saqlash</string>
+    <string name="action_logout">Chiqish</string>
+
+    <string name="label_amount">Badal: </string>
+    <string name="label_monthly_amount">Oylik badal: %1$d</string>
+    <string name="label_payer">To’lovchi: %1$s</string>
+    <string name="label_receiver">Qabul qiluvchi: %1$s</string>
+    <string name="label_amount_value">Summa: %1$d</string>
+    <string name="label_payment_day">To‘lov kuni: %1$d</string>
+    <string name="label_members_count">Ishtirokchilar: %1$d</string>
+    <string name="label_cycle_months">Davr: %1$d oy</string>
+    <string name="label_date">Sana: %1$s</string>
+    <string name="label_status">Holat: %1$s</string>
+    <string name="status_expected">Kutilmoqda</string>
+    <string name="status_paid">To’landi</string>
+    <string name="status_skipped">O’tkazib yuborildi</string>
+    <string name="status_overdue">Kechikkan</string>
+
+    <string name="payment_not_found">To’lov topilmadi</string>
+
+    <string name="stats_total_paid">Kiritilgan summa: %1$d</string>
+    <string name="stats_total_received">Olingan summa: %1$d</string>
+    <string name="stats_skipped">O’tkazib yuborilganlar: %1$d</string>
+    <string name="stats_discipline">Intizom: %1$d%%</string>
+    <string name="stats_total_paid_label">Kiritilgan summa</string>
+    <string name="stats_total_received_label">Olingan summa</string>
+    <string name="stats_skipped_label">O’tkazib yuborilganlar</string>
+    <string name="stats_discipline_label">Intizom</string>
+
+    <string name="error_room_name">Nom kamida 3 ta belgi</string>
+    <string name="error_description">Tavsif 200 belgidan oshmasin</string>
+    <string name="error_amount">Summani kiriting</string>
+    <string name="error_payment_day">To’lov kuni 1-28 oralig’ida</string>
+    <string name="error_cycle_length">Muddat 1-60 oy</string>
+    <string name="error_participants_count">Ishtirokchilar 5-20 bo’lishi kerak</string>
+    <string name="error_participants_email">Noto’g’ri email bor</string>
+    <string name="error_name">Ismni kiriting</string>
+    <string name="error_email">Email noto’g’ri</string>
+    <string name="error_phone">Telefon raqami noto’g’ri</string>
+    <string name="error_password">Parol kamida 8 ta belgi</string>
+    <string name="error_password_match">Parollar mos emas</string>
+    <string name="error_email_password">Email va parolni tekshiring</string>
+    <string name="error_login_failed">Login yoki parol noto‘g‘ri</string>
+    <string name="empty_payments">To‘lovlar hali yaratilmagan</string>
+
+    <string name="field_last_name">Familiya (ixtiyoriy)</string>
+    <string name="field_patronymic">Otasining ismi (ixtiyoriy)</string>
+
+    <string name="action_home">Bosh sahifa</string>
+    <string name="home_title">Bosh sahifa</string>
+    <string name="action_pick_gallery">Galereya</string>
+    <string name="action_pick_camera">Kamera</string>
+    <string name="action_change_photo">Rasmni o‘zgartirish</string>
+    <string name="action_remove_photo">Rasmni o‘chirish</string>
+    <string name="action_close">Yopish</string>
+
+    <string name="exit_title">Chiqish</string>
+    <string name="exit_message">Ilovani yopishni xohlaysizmi?</string>
+    <string name="exit_confirm">Ha</string>
+    <string name="exit_cancel">Yo‘q</string>
+
+    <string-array name="weekdays_short">
+        <item>Du</item>
+        <item>Se</item>
+        <item>Ch</item>
+        <item>Pa</item>
+        <item>Ju</item>
+        <item>Sh</item>
+        <item>Ya</item>
+    </string-array>
+</resources>

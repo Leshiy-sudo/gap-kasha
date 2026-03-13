@@ -1,0 +1,117 @@
+<resources>
+    <string name="app_name">Gap Kassa</string>
+
+    <string name="auth_title">Вход</string>
+    <string name="auth_subtitle">Управляйте взносами и ротацией в одном месте</string>
+    <string name="register_title">Регистрация</string>
+    <string name="section_personal">Личные данные</string>
+    <string name="section_contacts">Контакты</string>
+    <string name="section_security">Безопасность</string>
+    <string name="rooms_title">Комнаты</string>
+    <string name="create_room_title">Создание комнаты</string>
+    <string name="section_main">Основное</string>
+    <string name="section_finance">Финансовые параметры</string>
+    <string name="section_settings">Настройки</string>
+    <string name="section_participants">Участники</string>
+    <string name="helper_participants">Введите email через запятую</string>
+    <string name="calendar_title">Календарь</string>
+    <string name="payment_detail_title">Детали платежа</string>
+    <string name="stats_title">Статистика</string>
+    <string name="profile_title">Профиль</string>
+
+    <string name="field_name">Имя</string>
+    <string name="field_email">Email</string>
+    <string name="field_phone">Телефон</string>
+    <string name="field_password">Пароль</string>
+    <string name="field_confirm_password">Подтвердите пароль</string>
+    <string name="field_room_name">Название</string>
+    <string name="field_room_description">Описание</string>
+    <string name="field_amount">Сумма взноса</string>
+    <string name="field_payment_day">День оплаты</string>
+    <string name="field_cycle_length">Длительность (мес.)</string>
+    <string name="field_auto_rotate">Авто-ротация</string>
+    <string name="field_participants">Участники (email через запятую)</string>
+    <string name="field_photo_url">Фото (URL)</string>
+
+    <string name="action_login">Войти</string>
+    <string name="action_register">Регистрация</string>
+    <string name="action_forgot_password">Забыли пароль?</string>
+    <string name="action_create_account">Создать аккаунт</string>
+    <string name="action_back">Назад</string>
+    <string name="action_create">Создать</string>
+    <string name="action_calendar">Календарь</string>
+    <string name="action_stats">Статистика</string>
+    <string name="action_paid">Оплачено</string>
+    <string name="action_skipped">Пропущено</string>
+    <string name="action_export_csv">Экспорт CSV</string>
+    <string name="action_save">Сохранить</string>
+    <string name="action_logout">Выйти</string>
+
+    <string name="label_amount">Взнос: </string>
+    <string name="label_monthly_amount">Ежемесячный взнос: %1$d</string>
+    <string name="label_payer">Плательщик: %1$s</string>
+    <string name="label_receiver">Получатель: %1$s</string>
+    <string name="label_amount_value">Сумма: %1$d</string>
+    <string name="label_payment_day">День: %1$d</string>
+    <string name="label_members_count">Участники: %1$d</string>
+    <string name="label_cycle_months">Цикл: %1$d мес</string>
+    <string name="label_date">Дата: %1$s</string>
+    <string name="label_status">Статус: %1$s</string>
+    <string name="status_expected">Ожидается</string>
+    <string name="status_paid">Оплачено</string>
+    <string name="status_skipped">Пропущено</string>
+    <string name="status_overdue">Просрочено</string>
+
+    <string name="payment_not_found">Платеж не найден</string>
+
+    <string name="stats_total_paid">Сумма внесено: %1$d</string>
+    <string name="stats_total_received">Сумма получено: %1$d</string>
+    <string name="stats_skipped">Пропусков: %1$d</string>
+    <string name="stats_discipline">Дисциплина: %1$d%%</string>
+    <string name="stats_total_paid_label">Сумма внесено</string>
+    <string name="stats_total_received_label">Сумма получено</string>
+    <string name="stats_skipped_label">Пропусков</string>
+    <string name="stats_discipline_label">Дисциплина</string>
+
+    <string name="error_room_name">Название минимум 3 символа</string>
+    <string name="error_description">Описание максимум 200 символов</string>
+    <string name="error_amount">Введите сумму больше 0</string>
+    <string name="error_payment_day">День оплаты 1-28</string>
+    <string name="error_cycle_length">Длительность 1-60 месяцев</string>
+    <string name="error_participants_count">Участников должно быть от 5 до 20</string>
+    <string name="error_participants_email">Есть неверные email</string>
+    <string name="error_name">Введите имя</string>
+    <string name="error_email">Введите корректный email</string>
+    <string name="error_phone">Введите корректный номер</string>
+    <string name="error_password">Пароль минимум 8 символов</string>
+    <string name="error_password_match">Пароли не совпадают</string>
+    <string name="error_email_password">Проверьте email и пароль</string>
+    <string name="error_login_failed">Неверный логин или пароль</string>
+    <string name="empty_payments">Платежи пока не созданы</string>
+
+    <string name="field_last_name">Фамилия (необязательно)</string>
+    <string name="field_patronymic">Отчество (необязательно)</string>
+
+    <string name="action_home">Главная</string>
+    <string name="home_title">Главная страница</string>
+    <string name="action_pick_gallery">Галерея</string>
+    <string name="action_pick_camera">Камера</string>
+    <string name="action_change_photo">Изменить фото</string>
+    <string name="action_remove_photo">Удалить фото</string>
+    <string name="action_close">Закрыть</string>
+
+    <string name="exit_title">Выход</string>
+    <string name="exit_message">Вы действительно хотите закрыть приложение?</string>
+    <string name="exit_confirm">Да</string>
+    <string name="exit_cancel">Нет</string>
+
+    <string-array name="weekdays_short">
+        <item>Пн</item>
+        <item>Вт</item>
+        <item>Ср</item>
+        <item>Чт</item>
+        <item>Пт</item>
+        <item>Сб</item>
+        <item>Вс</item>
+    </string-array>
+</resources>
