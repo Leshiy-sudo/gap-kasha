@@ -18,6 +18,7 @@ import com.gapkassa.ui.screens.ProfileScreen
 import com.gapkassa.ui.screens.RegisterScreen
 import com.gapkassa.ui.screens.RoomScreen
 import com.gapkassa.ui.screens.RoomsScreen
+import com.gapkassa.ui.screens.ScheduleScreen
 import com.gapkassa.ui.screens.StatsScreen
 import com.gapkassa.viewmodel.AuthViewModel
 import com.gapkassa.viewmodel.CalendarViewModel
@@ -96,7 +97,20 @@ fun AppNavGraph() {
                 viewModel = roomViewModel,
                 onOpenCalendar = { navController.navigate("${Routes.CALENDAR}/$roomId") },
                 onOpenStats = { navController.navigate("${Routes.STATS}/$roomId") },
+                onOpenSchedule = { navController.navigate("${Routes.SCHEDULE}/$roomId") },
                 onPaymentClick = { paymentId -> navController.navigate("${Routes.PAYMENT_DETAIL}/$paymentId") },
+                onBack = { navController.popBackStack() },
+                onHome = goHome
+            )
+        }
+        composable(
+            route = "${Routes.SCHEDULE}/{roomId}",
+            arguments = listOf(navArgument("roomId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val roomId = backStackEntry.arguments?.getString("roomId") ?: return@composable
+            ScheduleScreen(
+                roomId = roomId,
+                viewModel = roomViewModel,
                 onBack = { navController.popBackStack() },
                 onHome = goHome
             )

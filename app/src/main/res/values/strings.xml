@@ -18,6 +18,7 @@
     <string name="payment_detail_title">Детали платежа</string>
     <string name="stats_title">Статистика</string>
     <string name="profile_title">Профиль</string>
+    <string name="schedule_title">Расписание</string>
 
     <string name="field_name">Имя</string>
     <string name="field_email">Email</string>
@@ -41,8 +42,10 @@
     <string name="action_create">Создать</string>
     <string name="action_calendar">Календарь</string>
     <string name="action_stats">Статистика</string>
+    <string name="action_edit_schedule">Изменить расписание</string>
     <string name="action_paid">Оплачено</string>
     <string name="action_skipped">Пропущено</string>
+    <string name="action_edit">Изменить</string>
     <string name="action_export_csv">Экспорт CSV</string>
     <string name="action_save">Сохранить</string>
     <string name="action_logout">Выйти</string>
@@ -57,6 +60,9 @@
     <string name="label_cycle_months">Цикл: %1$d мес</string>
     <string name="label_date">Дата: %1$s</string>
     <string name="label_status">Статус: %1$s</string>
+    <string name="label_receiver_short">Получатель</string>
+    <string name="role_leader">Ведущий</string>
+    <string name="role_member">Участник</string>
     <string name="status_expected">Ожидается</string>
     <string name="status_paid">Оплачено</string>
     <string name="status_skipped">Пропущено</string>
@@ -88,6 +94,10 @@
     <string name="error_email_password">Проверьте email и пароль</string>
     <string name="error_login_failed">Неверный логин или пароль</string>
     <string name="empty_payments">Платежи пока не созданы</string>
+    <string name="schedule_subtitle">Очередь получателей по месяцам</string>
+    <string name="schedule_hint">Нажмите «Изменить» чтобы настроить порядок</string>
+    <string name="schedule_confirm_title">Подтвердить изменения</string>
+    <string name="schedule_confirm_message">Сохранить новый порядок и получателей?</string>
 
     <string name="field_last_name">Фамилия (необязательно)</string>
     <string name="field_patronymic">Отчество (необязательно)</string>

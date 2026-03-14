@@ -18,6 +18,7 @@
     <string name="payment_detail_title">To’lov tafsilotlari</string>
     <string name="stats_title">Statistika</string>
     <string name="profile_title">Profil</string>
+    <string name="schedule_title">Jadval</string>
 
     <string name="field_name">Ism</string>
     <string name="field_email">Email</string>
@@ -41,8 +42,10 @@
     <string name="action_create">Yaratish</string>
     <string name="action_calendar">Kalendar</string>
     <string name="action_stats">Statistika</string>
+    <string name="action_edit_schedule">Jadvalni o‘zgartirish</string>
     <string name="action_paid">To’landi</string>
     <string name="action_skipped">O’tkazib yuborildi</string>
+    <string name="action_edit">O‘zgartirish</string>
     <string name="action_export_csv">CSV eksport</string>
     <string name="action_save">Saqlash</string>
     <string name="action_logout">Chiqish</string>
@@ -57,6 +60,9 @@
     <string name="label_cycle_months">Davr: %1$d oy</string>
     <string name="label_date">Sana: %1$s</string>
     <string name="label_status">Holat: %1$s</string>
+    <string name="label_receiver_short">Qabul qiluvchi</string>
+    <string name="role_leader">Yetakchi</string>
+    <string name="role_member">Ishtirokchi</string>
     <string name="status_expected">Kutilmoqda</string>
     <string name="status_paid">To’landi</string>
     <string name="status_skipped">O’tkazib yuborildi</string>
@@ -88,6 +94,10 @@
     <string name="error_email_password">Email va parolni tekshiring</string>
     <string name="error_login_failed">Login yoki parol noto‘g‘ri</string>
     <string name="empty_payments">To‘lovlar hali yaratilmagan</string>
+    <string name="schedule_subtitle">Oylar bo‘yicha qabul qiluvchilar navbati</string>
+    <string name="schedule_hint">Tartibni sozlash uchun “O‘zgartirish” tugmasini bosing</string>
+    <string name="schedule_confirm_title">O‘zgarishlarni tasdiqlash</string>
+    <string name="schedule_confirm_message">Yangi tartib va qabul qiluvchilarni saqlaysizmi?</string>
 
     <string name="field_last_name">Familiya (ixtiyoriy)</string>
     <string name="field_patronymic">Otasining ismi (ixtiyoriy)</string>
