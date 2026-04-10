@@ -39,6 +39,7 @@ fun AppOutlinedTextField(
     leadingIcon: (@Composable (() -> Unit))? = null,
     trailingIcon: (@Composable (() -> Unit))? = null,
     isPassword: Boolean = false,
+    maxLength: Int? = 30,
     readOnly: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default
@@ -71,9 +72,14 @@ fun AppOutlinedTextField(
         RoundedCornerShape(18.dp)
     }
 
+    val onValueChangeLimited: (String) -> Unit = { input ->
+        val trimmed = if (maxLength == null) input else input.take(maxLength)
+        onValueChange(trimmed)
+    }
+
     OutlinedTextField(
         value = value,
-        onValueChange = onValueChange,
+        onValueChange = onValueChangeLimited,
         label = { Text(label) },
         modifier = modifier.heightIn(min = 56.dp),
         isError = isError,

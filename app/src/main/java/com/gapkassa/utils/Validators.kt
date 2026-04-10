@@ -7,13 +7,13 @@ import android.util.Patterns
  */
 object Validators {
     fun isEmailValid(email: String): Boolean =
-        email.isNotBlank() && Patterns.EMAIL_ADDRESS.matcher(email).matches()
+        email.isNotBlank() && email.length <= 30 && Patterns.EMAIL_ADDRESS.matcher(email).matches()
 
-    fun isPasswordValid(password: String): Boolean = password.length >= 8
+    fun isPasswordValid(password: String): Boolean = password.length in 8..30
 
-    fun isRoomNameValid(name: String): Boolean = name.trim().length >= 3
+    fun isRoomNameValid(name: String): Boolean = name.trim().length in 3..30
 
-    fun isNameValid(name: String): Boolean = name.trim().length >= 2
+    fun isNameValid(name: String): Boolean = name.trim().length in 2..30
 
     fun isPhoneValid(phone: String): Boolean =
         phone.trim().length in 7..15 && phone.all { it.isDigit() || it == '+' || it == ' ' || it == '-' }

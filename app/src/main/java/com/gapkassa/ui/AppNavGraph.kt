@@ -13,6 +13,7 @@ import com.gapkassa.GapKassaApp
 import com.gapkassa.ui.screens.AuthScreen
 import com.gapkassa.ui.screens.CalendarScreen
 import com.gapkassa.ui.screens.CreateRoomScreen
+import com.gapkassa.ui.screens.EmailVerificationScreen
 import com.gapkassa.ui.screens.PaymentDetailScreen
 import com.gapkassa.ui.screens.ProfileScreen
 import com.gapkassa.ui.screens.RegisterScreen
@@ -50,18 +51,39 @@ fun AppNavGraph() {
         }
     }
 
-    NavHost(navController, startDestination = Routes.AUTH) {
+    val startDestination = if (app.authRepository.currentUserId != null) Routes.ROOMS else Routes.AUTH
+
+    NavHost(navController, startDestination = startDestination) {
         composable(Routes.AUTH) {
             AuthScreen(
                 viewModel = authViewModel,
-                onLoginSuccess = { navController.navigate(Routes.ROOMS) },
-                onRegister = { navController.navigate(Routes.REGISTER) }
+                onRegister = { navController.navigate(Routes.REGISTER) },
+                onLoggedIn = {
+                    roomsViewModel.refreshRooms()
+                    navController.navigate(Routes.ROOMS) {
+                        popUpTo(Routes.AUTH) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+        composable(Routes.VERIFY_EMAIL) {
+            EmailVerificationScreen(
+                viewModel = authViewModel,
+                onVerified = {
+                    roomsViewModel.refreshRooms()
+                    navController.navigate(Routes.ROOMS) {
+                        popUpTo(Routes.AUTH) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
         composable(Routes.REGISTER) {
             RegisterScreen(
                 viewModel = authViewModel,
-                onRegisterSuccess = { navController.navigate(Routes.ROOMS) },
+                onVerificationRequired = { navController.navigate(Routes.VERIFY_EMAIL) },
                 onBack = { navController.popBackStack() },
                 onHome = goHome
             )

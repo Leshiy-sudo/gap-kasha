@@ -14,4 +14,13 @@ interface MembershipDao {
 
     @Query("SELECT * FROM memberships WHERE roomId = :roomId ORDER BY orderIndex ASC")
     fun observeRoomMembers(roomId: String): Flow<List<MembershipEntity>>
+
+    @Query("DELETE FROM memberships WHERE roomId = :roomId")
+    suspend fun clearRoom(roomId: String)
+
+    @Query("DELETE FROM memberships")
+    suspend fun clearAll()
+
+    @Query("DELETE FROM memberships WHERE roomId NOT IN (:roomIds)")
+    suspend fun clearNotInRooms(roomIds: Set<String>)
 }

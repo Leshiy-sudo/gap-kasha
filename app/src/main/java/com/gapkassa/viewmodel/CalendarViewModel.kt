@@ -3,6 +3,7 @@ package com.gapkassa.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gapkassa.data.db.PaymentEntity
+import com.gapkassa.data.db.UserEntity
 import com.gapkassa.data.repository.RoomRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /**
@@ -29,7 +31,14 @@ class CalendarViewModel(
         .map { payments -> payments.groupBy { it.month } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
+    val usersMap: StateFlow<Map<String, UserEntity>> = roomRepository.observeUsers()
+        .map { users -> users.associateBy { it.id } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
     fun setRoom(roomId: String) {
         roomIdFlow.value = roomId
+        viewModelScope.launch {
+            runCatching { roomRepository.syncRoom(roomId) }
+        }
     }
 }

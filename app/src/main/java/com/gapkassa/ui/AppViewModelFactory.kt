@@ -18,11 +18,11 @@ class AppViewModelFactory(private val app: GapKassaApp) : ViewModelProvider.Fact
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return when {
             modelClass.isAssignableFrom(AuthViewModel::class.java) ->
-                AuthViewModel(app.authRepository, app.actionLogRepository, app.profileRepository) as T
+                AuthViewModel(app.authRepository, app.profileRepository) as T
             modelClass.isAssignableFrom(RoomsViewModel::class.java) ->
-                RoomsViewModel(app.roomRepository, app.actionLogRepository) as T
+                RoomsViewModel(app.roomRepository, app.actionLogRepository, app.authRepository) as T
             modelClass.isAssignableFrom(RoomViewModel::class.java) ->
-                RoomViewModel(app.roomRepository, app.actionLogRepository) as T
+                RoomViewModel(app.roomRepository, app.actionLogRepository, app.authRepository) as T
             modelClass.isAssignableFrom(CalendarViewModel::class.java) ->
                 CalendarViewModel(app.roomRepository) as T
             modelClass.isAssignableFrom(StatsViewModel::class.java) ->

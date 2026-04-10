@@ -4,6 +4,8 @@
     <string name="auth_title">Вход</string>
     <string name="auth_subtitle">Управляйте взносами и ротацией в одном месте</string>
     <string name="register_title">Регистрация</string>
+    <string name="verification_title">Подтверждение email</string>
+    <string name="verification_subtitle">Мы отправили код на %1$s. Введите его ниже.</string>
     <string name="section_personal">Личные данные</string>
     <string name="section_contacts">Контакты</string>
     <string name="section_security">Безопасность</string>
@@ -13,7 +15,7 @@
     <string name="section_finance">Финансовые параметры</string>
     <string name="section_settings">Настройки</string>
     <string name="section_participants">Участники</string>
-    <string name="helper_participants">Введите email через запятую</string>
+    <string name="helper_participants">Добавьте от 5 до 20 участников</string>
     <string name="calendar_title">Календарь</string>
     <string name="payment_detail_title">Детали платежа</string>
     <string name="stats_title">Статистика</string>
@@ -22,6 +24,7 @@
 
     <string name="field_name">Имя</string>
     <string name="field_email">Email</string>
+    <string name="field_verification_code">Код из письма</string>
     <string name="field_phone">Телефон</string>
     <string name="field_password">Пароль</string>
     <string name="field_confirm_password">Подтвердите пароль</string>
@@ -31,11 +34,19 @@
     <string name="field_payment_day">День оплаты</string>
     <string name="field_cycle_length">Длительность (мес.)</string>
     <string name="field_auto_rotate">Авто-ротация</string>
-    <string name="field_participants">Участники (email через запятую)</string>
+    <string name="field_participants">Email участника</string>
+    <string name="action_add_participant">Добавить</string>
+    <string name="label_you_suffix"> (вы)</string>
     <string name="field_photo_url">Фото (URL)</string>
 
     <string name="action_login">Войти</string>
     <string name="action_register">Регистрация</string>
+    <string name="action_send_code">Получить код</string>
+    <string name="action_verify">Подтвердить</string>
+    <string name="action_resend_code">Отправить код снова</string>
+    <string name="action_delete_room">Удалить</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_ok">Ок</string>
     <string name="action_forgot_password">Забыли пароль?</string>
     <string name="action_create_account">Создать аккаунт</string>
     <string name="action_back">Назад</string>
@@ -88,16 +99,46 @@
     <string name="error_participants_email">Есть неверные email</string>
     <string name="error_name">Введите имя</string>
     <string name="error_email">Введите корректный email</string>
+    <string name="error_email_not_verified">Подтвердите email, чтобы продолжить</string>
+    <string name="error_email_exists">Email уже зарегистрирован</string>
+    <string name="error_login_locked">Слишком много попыток. Попробуйте позже.</string>
+    <string name="error_user_inactive">Аккаунт отключён. Обратитесь в поддержку.</string>
     <string name="error_phone">Введите корректный номер</string>
-    <string name="error_password">Пароль минимум 8 символов</string>
+    <string name="error_password">Пароль 8–30 символов</string>
+    <string name="error_verification_code">Введите код из письма</string>
+    <string name="error_verification_code_invalid">Неверный код. Проверьте письмо.</string>
+    <string name="error_verification_code_expired">Срок действия кода истёк. Запросите новый.</string>
+    <string name="error_verification_code_attempts">Слишком много попыток. Запросите новый код.</string>
     <string name="error_password_match">Пароли не совпадают</string>
     <string name="error_email_password">Проверьте email и пароль</string>
+    <string name="error_otp_cooldown">Код уже отправлен. Подождите немного.</string>
     <string name="error_login_failed">Неверный логин или пароль</string>
+    <string name="delete_room_title">Удалить комнату?</string>
+    <string name="delete_room_message">Комнату можно удалить, если ещё не было оплаченных платежей. Продолжить?</string>
+    <string name="delete_room_failed_title">Не удалось удалить</string>
+    <string name="error_room_delete_paid">Нельзя удалить комнату: есть оплаченные платежи.</string>
+    <string name="error_room_delete_forbidden">Удаление доступно только создателю комнаты.</string>
+    <string name="error_room_delete_not_found">Комната не найдена.</string>
+    <string name="error_room_delete_unknown">Не удалось удалить комнату. Попробуйте ещё раз.</string>
     <string name="empty_payments">Платежи пока не созданы</string>
     <string name="schedule_subtitle">Очередь получателей по месяцам</string>
     <string name="schedule_hint">Нажмите «Изменить» чтобы настроить порядок</string>
     <string name="schedule_confirm_title">Подтвердить изменения</string>
     <string name="schedule_confirm_message">Сохранить новый порядок и получателей?</string>
+    <string name="schedule_admin_only_hint">Менять расписание может только ведущий.</string>
+    <string name="schedule_error_invalid_receiver">Получатель должен быть участником комнаты.</string>
+    <string name="schedule_error_save">Не удалось сохранить расписание. Проверьте доступ и попробуйте ещё раз.</string>
+
+    <string name="verification_hint">Можно вставить ссылку из письма — приложение извлечёт код.</string>
+    <string name="message_verification_sent">Письмо с кодом отправлено. Проверьте почту.</string>
+    <string name="helper_register_otp">Мы отправим код подтверждения на указанный email.</string>
+
+    <string name="ad_title">Рекламный блок</string>
+    <string name="ad_badge">AD</string>
+    <string name="ad_body">Лаконичное место для интеграции. Подключим нужного партнёра за пару шагов.</string>
+    <string name="ad_cta">Подключить</string>
+    <string name="ad_test_title">Тестовая интеграция</string>
+    <string name="ad_test_body">GapPay: скидка 20% на комиссии до 30 апреля. Подключение за 5 минут.</string>
 
     <string name="field_last_name">Фамилия (необязательно)</string>
     <string name="field_patronymic">Отчество (необязательно)</string>

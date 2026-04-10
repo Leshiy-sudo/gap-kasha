@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.io.File
 
 /**
@@ -53,6 +54,9 @@ class StatsViewModel(
 
     fun setRoom(roomId: String) {
         roomIdFlow.value = roomId
+        viewModelScope.launch {
+            runCatching { roomRepository.syncRoom(roomId) }
+        }
     }
 
     fun exportCsv(roomName: String, payments: List<PaymentEntity>): File {

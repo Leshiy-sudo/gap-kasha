@@ -29,4 +29,13 @@ interface RoomDao {
 
     @Query("SELECT COUNT(*) FROM rooms")
     suspend fun count(): Int
+
+    @Query("DELETE FROM rooms WHERE id = :roomId")
+    suspend fun deleteById(roomId: String)
+
+    @Query("DELETE FROM rooms")
+    suspend fun clear()
+
+    @Query("DELETE FROM rooms WHERE id NOT IN (:roomIds)")
+    suspend fun deleteNotIn(roomIds: Set<String>)
 }

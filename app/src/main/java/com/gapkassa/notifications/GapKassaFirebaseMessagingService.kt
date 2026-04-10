@@ -1,6 +1,7 @@
 package com.gapkassa.notifications
 
 import android.util.Log
+import com.gapkassa.BuildConfig
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
@@ -10,11 +11,15 @@ import com.google.firebase.messaging.RemoteMessage
 class GapKassaFirebaseMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Log.d("GapKassaFCM", "New token: $token")
+        if (BuildConfig.DEBUG) {
+            Log.d("GapKassaFCM", "New token: $token")
+        }
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
-        Log.d("GapKassaFCM", "Message: ${message.data}")
+        if (BuildConfig.DEBUG) {
+            Log.d("GapKassaFCM", "Message: ${message.data}")
+        }
     }
 }

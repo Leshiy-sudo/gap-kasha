@@ -6,6 +6,7 @@ package com.gapkassa.ui
 object Routes {
     const val AUTH = "auth"
     const val REGISTER = "register"
+    const val VERIFY_EMAIL = "verify_email"
     const val ROOMS = "rooms"
     const val CREATE_ROOM = "create_room"
     const val ROOM_DETAIL = "room_detail"

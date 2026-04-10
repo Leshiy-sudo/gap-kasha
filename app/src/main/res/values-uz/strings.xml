@@ -4,6 +4,8 @@
     <string name="auth_title">Kirish</string>
     <string name="auth_subtitle">Badallar va rotatsiyani bitta joyda boshqaring</string>
     <string name="register_title">Ro’yxatdan o’tish</string>
+    <string name="verification_title">Emailni tasdiqlash</string>
+    <string name="verification_subtitle">Biz %1$s manziliga kod yubordik. Uni pastga kiriting.</string>
     <string name="section_personal">Shaxsiy ma’lumotlar</string>
     <string name="section_contacts">Kontaktlar</string>
     <string name="section_security">Xavfsizlik</string>
@@ -13,7 +15,7 @@
     <string name="section_finance">Moliyaviy parametrlar</string>
     <string name="section_settings">Sozlamalar</string>
     <string name="section_participants">Ishtirokchilar</string>
-    <string name="helper_participants">Emailni vergul orqali kiriting</string>
+    <string name="helper_participants">5–20 ishtirokchi qo‘shing</string>
     <string name="calendar_title">Kalendar</string>
     <string name="payment_detail_title">To’lov tafsilotlari</string>
     <string name="stats_title">Statistika</string>
@@ -22,6 +24,7 @@
 
     <string name="field_name">Ism</string>
     <string name="field_email">Email</string>
+    <string name="field_verification_code">Xatdagi kod</string>
     <string name="field_phone">Telefon</string>
     <string name="field_password">Parol</string>
     <string name="field_confirm_password">Parolni tasdiqlang</string>
@@ -31,11 +34,16 @@
     <string name="field_payment_day">To’lov kuni</string>
     <string name="field_cycle_length">Muddat (oy)</string>
     <string name="field_auto_rotate">Avto-rotatsiya</string>
-    <string name="field_participants">Ishtirokchilar (email, vergul bilan)</string>
+    <string name="field_participants">Ishtirokchi emaili</string>
+    <string name="action_add_participant">Qo‘shish</string>
+    <string name="label_you_suffix"> (siz)</string>
     <string name="field_photo_url">Foto (URL)</string>
 
     <string name="action_login">Kirish</string>
     <string name="action_register">Ro’yxatdan o’tish</string>
+    <string name="action_send_code">Kod olish</string>
+    <string name="action_verify">Tasdiqlash</string>
+    <string name="action_resend_code">Kodni qayta yuborish</string>
     <string name="action_forgot_password">Parolni unutdingizmi?</string>
     <string name="action_create_account">Hisob yaratish</string>
     <string name="action_back">Orqaga</string>
@@ -88,16 +96,29 @@
     <string name="error_participants_email">Noto’g’ri email bor</string>
     <string name="error_name">Ismni kiriting</string>
     <string name="error_email">Email noto’g’ri</string>
+    <string name="error_email_not_verified">Davom etish uchun emailingizni tasdiqlang</string>
+    <string name="error_email_exists">Email allaqachon ro‘yxatdan o‘tgan</string>
+    <string name="error_login_locked">Juda ko‘p urinish. Keyinroq urinib ko‘ring.</string>
+    <string name="error_user_inactive">Hisob o‘chirib qo‘yilgan. Qo‘llab-quvvatlashga murojaat qiling.</string>
     <string name="error_phone">Telefon raqami noto’g’ri</string>
-    <string name="error_password">Parol kamida 8 ta belgi</string>
+    <string name="error_password">Parol 8–30 belgi</string>
+    <string name="error_verification_code">Xatdagi kodni kiriting</string>
+    <string name="error_verification_code_invalid">Kod noto‘g‘ri. Xatni tekshiring.</string>
+    <string name="error_verification_code_expired">Kodning muddati tugagan. Yangisini so‘rang.</string>
+    <string name="error_verification_code_attempts">Juda ko‘p urinish. Yangi kod so‘rang.</string>
     <string name="error_password_match">Parollar mos emas</string>
     <string name="error_email_password">Email va parolni tekshiring</string>
+    <string name="error_otp_cooldown">Kod yuborilgan. Biroz kuting.</string>
     <string name="error_login_failed">Login yoki parol noto‘g‘ri</string>
     <string name="empty_payments">To‘lovlar hali yaratilmagan</string>
     <string name="schedule_subtitle">Oylar bo‘yicha qabul qiluvchilar navbati</string>
     <string name="schedule_hint">Tartibni sozlash uchun “O‘zgartirish” tugmasini bosing</string>
     <string name="schedule_confirm_title">O‘zgarishlarni tasdiqlash</string>
     <string name="schedule_confirm_message">Yangi tartib va qabul qiluvchilarni saqlaysizmi?</string>
+
+    <string name="verification_hint">Xatdagi havolani joylashtirsangiz ham bo‘ladi — ilova kodni ajratib oladi.</string>
+    <string name="message_verification_sent">Kodli xat yuborildi. Pochtangizni tekshiring.</string>
+    <string name="helper_register_otp">Tasdiqlash kodi emailingizga yuboriladi.</string>
 
     <string name="field_last_name">Familiya (ixtiyoriy)</string>
     <string name="field_patronymic">Otasining ismi (ixtiyoriy)</string>

@@ -24,8 +24,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Emulator uses 10.0.2.2 to reach host machine.
+            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080\"")
+        }
         release {
             isMinifyEnabled = false
+            buildConfigField("String", "API_BASE_URL", "\"https://api.gapkassa.local\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -79,12 +84,18 @@ dependencies {
     ksp("androidx.room:room-compiler:2.6.1")
 
     implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
-    implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-messaging-ktx")
 
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-moshi:2.11.0")
+    implementation("com.squareup.moshi:moshi-kotlin:1.15.1")
+    ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.1")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

@@ -3,6 +3,8 @@ package com.gapkassa
 import android.app.Application
 import com.gapkassa.BuildConfig
 import com.gapkassa.data.db.AppDatabase
+import com.gapkassa.data.preferences.TokenStore
+import com.gapkassa.data.remote.ApiClient
 import com.gapkassa.data.repository.ActionLogRepository
 import com.gapkassa.data.repository.AuthRepository
 import com.gapkassa.data.repository.ProfileRepository
@@ -21,6 +23,10 @@ class GapKassaApp : Application() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     lateinit var database: AppDatabase
         private set
+    lateinit var tokenStore: TokenStore
+        private set
+    lateinit var apiClient: ApiClient
+        private set
     lateinit var authRepository: AuthRepository
         private set
     lateinit var roomRepository: RoomRepository
@@ -35,11 +41,13 @@ class GapKassaApp : Application() {
     override fun onCreate() {
         super.onCreate()
         database = AppDatabase.getInstance(this)
-        authRepository = AuthRepository(applicationContext)
-        roomRepository = RoomRepository(database)
+        tokenStore = TokenStore(applicationContext)
+        apiClient = ApiClient(tokenStore)
+        authRepository = AuthRepository(apiClient.backendApi, tokenStore)
+        roomRepository = RoomRepository(database, apiClient.backendApi)
         actionLogRepository = ActionLogRepository(database)
         settingsRepository = SettingsRepository(applicationContext)
-        profileRepository = ProfileRepository(applicationContext)
+        profileRepository = ProfileRepository(apiClient.backendApi)
         if (BuildConfig.DEBUG) {
             appScope.launch {
                 roomRepository.seedDemoIfEmpty()

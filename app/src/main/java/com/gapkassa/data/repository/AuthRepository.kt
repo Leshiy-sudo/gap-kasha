@@ -1,55 +1,85 @@
 package com.gapkassa.data.repository
 
-import android.content.Context
-import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.tasks.await
+import com.gapkassa.data.preferences.TokenStore
+import com.gapkassa.data.remote.BackendApi
+import com.gapkassa.data.remote.LoginRequest
+import com.gapkassa.data.remote.RegisterRequest
+import com.gapkassa.data.remote.RegisterVerifyRequest
+import com.gapkassa.data.remote.RefreshRequest
+import com.gapkassa.data.remote.LogoutRequest
+import com.gapkassa.data.remote.UserDto
 
 /**
- * Authentication gateway. Uses Firebase when available and falls back to a local stub in debug.
+ * Authentication gateway backed by the local/remote API.
  */
-class AuthRepository(context: Context) {
-    private val auth: FirebaseAuth? = try {
-        if (FirebaseApp.getApps(context).isEmpty()) {
-            FirebaseApp.initializeApp(context)
-        }
-        FirebaseAuth.getInstance()
-    } catch (e: Exception) {
-        null
-    }
-
-    private var localUserId: String? = null
-
-    val isFirebaseAvailable: Boolean
-        get() = auth != null
-
+class AuthRepository(
+    private val api: BackendApi,
+    private val tokenStore: TokenStore
+) {
     val currentUserId: String?
-        get() = auth?.currentUser?.uid ?: localUserId
+        get() = tokenStore.userId
 
-    suspend fun register(email: String, password: String): Result<Unit> = runCatching {
-        if (auth == null) {
-            localUserId = email.lowercase()
-            return@runCatching
-        }
-        val result = auth.createUserWithEmailAndPassword(email, password).await()
-        result.user?.sendEmailVerification()?.await()
+    val currentEmail: String?
+        get() = tokenStore.userEmail
+
+    suspend fun requestRegisterOtp(
+        email: String,
+        password: String,
+        name: String?,
+        lastName: String?,
+        patronymic: String?,
+        phone: String?
+    ): Result<Unit> = runCatching {
+        api.requestRegisterOtp(
+            RegisterRequest(
+                email = email,
+                password = password,
+                name = name,
+                lastName = lastName,
+                patronymic = patronymic,
+                phone = phone
+            )
+        )
     }
 
-    suspend fun login(email: String, password: String): Result<Unit> = runCatching {
-        if (auth == null) {
-            localUserId = email.lowercase()
-            return@runCatching
-        }
-        auth.signInWithEmailAndPassword(email, password).await()
+    suspend fun verifyRegisterOtp(email: String, code: String): Result<UserDto> = runCatching {
+        val response = api.verifyRegisterOtp(RegisterVerifyRequest(email, code))
+        tokenStore.accessToken = response.accessToken
+        tokenStore.refreshToken = response.refreshToken
+        tokenStore.userId = response.user.id
+        tokenStore.userEmail = response.user.email
+        response.user
     }
 
-    suspend fun resetPassword(email: String): Result<Unit> = runCatching {
-        if (auth == null) return@runCatching
-        auth.sendPasswordResetEmail(email).await()
+    suspend fun login(email: String, password: String): Result<UserDto> = runCatching {
+        val response = api.login(LoginRequest(email, password))
+        tokenStore.accessToken = response.accessToken
+        tokenStore.refreshToken = response.refreshToken
+        tokenStore.userId = response.user.id
+        tokenStore.userEmail = response.user.email
+        response.user
+    }
+
+    suspend fun refreshTokens(): Result<Unit> = runCatching {
+        val refreshToken = tokenStore.refreshToken ?: error("No refresh token")
+        val response = api.refresh(RefreshRequest(refreshToken))
+        tokenStore.accessToken = response.accessToken
+        tokenStore.refreshToken = response.refreshToken
+        tokenStore.userId = response.user.id
+        tokenStore.userEmail = response.user.email
     }
 
     fun logout() {
-        auth?.signOut()
-        localUserId = null
+        tokenStore.clear()
+    }
+
+    suspend fun logoutRemote(): Result<Unit> = runCatching {
+        val refreshToken = tokenStore.refreshToken
+        if (refreshToken != null) {
+            api.logout(LogoutRequest(refreshToken))
+        } else {
+            api.logout(LogoutRequest(null))
+        }
+        tokenStore.clear()
     }
 }

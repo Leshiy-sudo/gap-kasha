@@ -22,12 +22,20 @@ class ProfileViewModel(
     val profile: StateFlow<UserProfile> = profileRepository.profileFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserProfile("", "", "", "", "", ""))
 
+    init {
+        viewModelScope.launch {
+            runCatching { profileRepository.refreshProfile() }
+        }
+    }
+
     fun logout(onDone: () -> Unit) {
         viewModelScope.launch {
             authRepository.currentUserId?.let { userId ->
                 actionLogRepository.log(userId, null, "logout")
             }
-            authRepository.logout()
+            runCatching { authRepository.logoutRemote() }.onFailure {
+                authRepository.logout()
+            }
             onDone()
         }
     }
