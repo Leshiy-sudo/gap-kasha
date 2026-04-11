@@ -527,7 +527,17 @@ def request_register_otp(payload: RegisterOtpRequest, request: Request):
             body=f"Ваш код: {code}\nОн действителен {OTP_TTL_MIN} минут.",
         )
     except Exception:
-        raise HTTPException(status_code=502, detail="email_send_failed")
+        with db_session() as conn:
+            log_event(
+                conn,
+                actor_id,
+                "auth.otp_email_failed",
+                "auth",
+                None,
+                None,
+                {"email": email},
+                request,
+            )
 
     return MessageResponse(message="otp_sent")
 
