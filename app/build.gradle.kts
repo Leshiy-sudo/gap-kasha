@@ -26,7 +26,7 @@ android {
     buildTypes {
         debug {
             // Emulator uses 10.0.2.2 to reach host machine.
-            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://communications-both-catherine-decided.trycloudflare.com\"")
         }
         release {
             isMinifyEnabled = false

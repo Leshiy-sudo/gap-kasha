@@ -1,6 +1,7 @@
 # GapKassa Local Backend
 
 Локальный backend для OTP + хранения данных + аудит‑лога. Хранит данные в SQLite и пишет письма в `outbox/`.
+При наличии SMTP‑настроек будет отправлять реальные письма.
 
 ## Быстрый старт
 
@@ -25,6 +26,21 @@ curl http://localhost:8080/health
 ## Где искать код из письма
 
 Каждый OTP сохраняется в `outbox/` как текстовый файл.
+
+## SMTP (опционально)
+
+Создайте файл `.env` рядом с `main.py`:
+
+```bash
+SMTP_HOST=smtp.yandex.com
+SMTP_PORT=465
+SMTP_USER=example@yandex.com
+SMTP_PASS=app_password
+SMTP_FROM=GapKassa <example@yandex.com>
+SMTP_TLS=false
+```
+
+Если SMTP не задан, письма будут только в `outbox/`.
 
 ## Основные эндпоинты
 

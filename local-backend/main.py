@@ -511,11 +511,14 @@ def request_register_otp(payload: RegisterOtpRequest, request: Request):
         )
         log_event(conn, actor_id, "auth.register.request_otp", "auth", None, None, {"email": email}, request)
 
-    send_email(
-        recipient=email,
-        subject="Ваш код подтверждения",
-        body=f"Ваш код: {code}\nОн действителен {OTP_TTL_MIN} минут.",
-    )
+    try:
+        send_email(
+            recipient=email,
+            subject="Ваш код подтверждения",
+            body=f"Ваш код: {code}\nОн действителен {OTP_TTL_MIN} минут.",
+        )
+    except Exception:
+        raise HTTPException(status_code=502, detail="email_send_failed")
 
     return MessageResponse(message="otp_sent")
 

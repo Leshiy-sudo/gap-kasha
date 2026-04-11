@@ -1,3 +1,7 @@
+import os
+import smtplib
+import ssl
+from email.message import EmailMessage
 from pathlib import Path
 from uuid import uuid4
 from datetime import datetime
@@ -5,6 +9,41 @@ from db import db_session, now_iso
 
 BASE_DIR = Path(__file__).resolve().parent
 OUTBOX_DIR = BASE_DIR / "outbox"
+
+
+def _load_env_file():
+    env_path = BASE_DIR / ".env"
+    if not env_path.exists():
+        return
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("\"").strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+def _smtp_settings():
+    _load_env_file()
+    host = os.getenv("SMTP_HOST")
+    user = os.getenv("SMTP_USER")
+    password = os.getenv("SMTP_PASS")
+    if not (host and user and password):
+        return None
+    port = int(os.getenv("SMTP_PORT", "465"))
+    use_tls = os.getenv("SMTP_TLS", "false").lower() == "true"
+    sender = os.getenv("SMTP_FROM") or user
+    return {
+        "host": host,
+        "port": port,
+        "user": user,
+        "password": password,
+        "use_tls": use_tls,
+        "sender": sender,
+    }
 
 
 def send_email(recipient: str, subject: str, body: str):
@@ -18,3 +57,25 @@ def send_email(recipient: str, subject: str, body: str):
             "INSERT INTO email_outbox (id, recipient, subject, body, created_at) VALUES (?, ?, ?, ?, ?)",
             (message_id, recipient, subject, body, now_iso())
         )
+
+    settings = _smtp_settings()
+    if settings is None:
+        return
+
+    msg = EmailMessage()
+    msg["From"] = settings["sender"]
+    msg["To"] = recipient
+    msg["Subject"] = subject
+    msg.set_content(body)
+
+    try:
+        if settings["use_tls"]:
+            server = smtplib.SMTP(settings["host"], settings["port"], timeout=10)
+            server.starttls(context=ssl.create_default_context())
+        else:
+            server = smtplib.SMTP_SSL(settings["host"], settings["port"], context=ssl.create_default_context(), timeout=10)
+        server.login(settings["user"], settings["password"])
+        server.send_message(msg)
+        server.quit()
+    except Exception as exc:
+        raise RuntimeError("smtp_send_failed") from exc
