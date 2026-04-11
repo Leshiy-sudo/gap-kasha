@@ -4,6 +4,7 @@ import re
 import hashlib
 from uuid import uuid4
 from datetime import datetime, timedelta, date
+import calendar
 from typing import Optional, List
 
 from fastapi import FastAPI, HTTPException, Request, Depends, status
@@ -310,11 +311,15 @@ def require_room_admin(conn, room_id: str, user_id: str):
         raise HTTPException(status_code=403, detail="room_admin_required")
 
 
+def days_in_month(year: int, month: int) -> int:
+    return calendar.monthrange(year, month)[1]
+
+
 def add_months(base: date, months: int) -> date:
     total_month = (base.month - 1) + months
     year = base.year + total_month // 12
     month = total_month % 12 + 1
-    day = min(base.day, 28)
+    day = min(base.day, days_in_month(year, month))
     return date(year, month, day)
 
 
@@ -323,9 +328,13 @@ def generate_payments(room_id: str, member_ids: List[str], amount: int, payment_
         return []
     payments = []
     now_date = datetime.utcnow().date()
-    clamped_day = max(1, min(payment_day, 28))
+    clamped_day = max(1, min(payment_day, 31))
+    base_day = min(clamped_day, days_in_month(now_date.year, now_date.month))
+    base_date = now_date.replace(day=base_day)
     for i in range(cycle_length):
-        month_date = add_months(now_date, i).replace(day=clamped_day)
+        month_date = add_months(base_date, i)
+        target_day = min(clamped_day, days_in_month(month_date.year, month_date.month))
+        month_date = month_date.replace(day=target_day)
         receiver_id = member_ids[i % len(member_ids)]
         for payer_id in member_ids:
             if payer_id == receiver_id:
@@ -791,7 +800,7 @@ def create_room(payload: RoomCreate, request: Request, current_user: dict = Depe
     validate_description_length(payload.description)
     if payload.monthly_amount <= 0:
         raise HTTPException(status_code=400, detail="amount_invalid")
-    if payload.payment_day < 1 or payload.payment_day > 28:
+    if payload.payment_day < 1 or payload.payment_day > 31:
         raise HTTPException(status_code=400, detail="payment_day_invalid")
     if payload.cycle_length_months < 1 or payload.cycle_length_months > 60:
         raise HTTPException(status_code=400, detail="cycle_length_invalid")
@@ -934,6 +943,8 @@ def update_room(room_id: str, payload: RoomUpdate, request: Request, current_use
             description = existing["description"]
         monthly_amount = payload.monthly_amount if payload.monthly_amount is not None else existing["monthly_amount"]
         payment_day = payload.payment_day if payload.payment_day is not None else existing["payment_day"]
+        if payment_day is None or payment_day < 1 or payment_day > 31:
+            raise HTTPException(status_code=400, detail="payment_day_invalid")
         cycle_length = payload.cycle_length_months if payload.cycle_length_months is not None else existing["cycle_length_months"]
         auto_rotate = payload.auto_rotate if payload.auto_rotate is not None else bool(existing["auto_rotate"]) if existing["auto_rotate"] is not None else None
         member_count = payload.member_count if payload.member_count is not None else existing["member_count"]
@@ -1114,12 +1125,13 @@ def update_schedule(room_id: str, payload: ScheduleUpdate, request: Request, cur
         member_ids = [row["user_id"] for row in members]
         if not member_ids:
             raise HTTPException(status_code=400, detail="members_missing")
-        clamped_day = max(1, min(room["payment_day"] or 1, 28))
+        desired_day = max(1, min(room["payment_day"] or 1, 31))
 
         for item in payload.items:
             month_date = parse_iso_date(item.month, "month")
             month_prefix = month_date.strftime("%Y-%m")
-            target_month = month_date.replace(day=clamped_day)
+            target_day = min(desired_day, days_in_month(month_date.year, month_date.month))
+            target_month = month_date.replace(day=target_day)
             receiver_id = item.receiver_id
             if receiver_id not in member_ids:
                 raise HTTPException(status_code=400, detail="receiver_invalid")
@@ -1139,9 +1151,9 @@ def update_schedule(room_id: str, payload: ScheduleUpdate, request: Request, cur
                 else:
                     existing = payment_by_payer[payer_id]
                     existing_day = int(existing["month"][8:10])
-                    if existing_day == clamped_day:
+                    if existing_day == target_day:
                         extra_ids.append(row_dict["id"])
-                    elif row_day == clamped_day:
+                    elif row_day == target_day:
                         extra_ids.append(existing["id"])
                         payment_by_payer[payer_id] = row_dict
                     else:

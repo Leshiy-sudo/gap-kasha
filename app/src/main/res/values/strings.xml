@@ -46,6 +46,7 @@
     <string name="action_resend_code">Отправить код снова</string>
     <string name="action_delete_room">Удалить</string>
     <string name="action_cancel">Отмена</string>
+    <string name="action_select">Выбрать</string>
     <string name="action_ok">Ок</string>
     <string name="action_forgot_password">Забыли пароль?</string>
     <string name="action_create_account">Создать аккаунт</string>
@@ -93,7 +94,7 @@
     <string name="error_room_name">Название минимум 3 символа</string>
     <string name="error_description">Описание максимум 200 символов</string>
     <string name="error_amount">Введите сумму больше 0</string>
-    <string name="error_payment_day">День оплаты 1-28</string>
+    <string name="error_payment_day">День оплаты 1-31</string>
     <string name="error_cycle_length">Длительность 1-60 месяцев</string>
     <string name="error_participants_count">Участников должно быть от 5 до 20</string>
     <string name="error_participants_email">Есть неверные email</string>
@@ -112,6 +113,7 @@
     <string name="error_password_match">Пароли не совпадают</string>
     <string name="error_email_password">Проверьте email и пароль</string>
     <string name="error_otp_cooldown">Код уже отправлен. Подождите немного.</string>
+    <string name="error_email_send_failed">Не удалось отправить код. Проверьте почту и попробуйте снова.</string>
     <string name="error_login_failed">Неверный логин или пароль</string>
     <string name="delete_room_title">Удалить комнату?</string>
     <string name="delete_room_message">Комнату можно удалить, если ещё не было оплаченных платежей. Продолжить?</string>

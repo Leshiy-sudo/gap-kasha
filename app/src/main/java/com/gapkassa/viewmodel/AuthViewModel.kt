@@ -213,6 +213,7 @@ class AuthViewModel(
         "otp_cooldown" -> com.gapkassa.R.string.error_otp_cooldown
         "password_invalid" -> com.gapkassa.R.string.error_password
         "invalid_email" -> com.gapkassa.R.string.error_email
+        "email_send_failed" -> com.gapkassa.R.string.error_email_send_failed
         else -> null
     }
 

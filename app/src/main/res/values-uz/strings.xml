@@ -56,6 +56,8 @@
     <string name="action_edit">O‘zgartirish</string>
     <string name="action_export_csv">CSV eksport</string>
     <string name="action_save">Saqlash</string>
+    <string name="action_select">Tanlash</string>
+    <string name="action_cancel">Bekor qilish</string>
     <string name="action_logout">Chiqish</string>
 
     <string name="label_amount">Badal: </string>
@@ -90,7 +92,7 @@
     <string name="error_room_name">Nom kamida 3 ta belgi</string>
     <string name="error_description">Tavsif 200 belgidan oshmasin</string>
     <string name="error_amount">Summani kiriting</string>
-    <string name="error_payment_day">To’lov kuni 1-28 oralig’ida</string>
+    <string name="error_payment_day">To’lov kuni 1-31 oralig’ida</string>
     <string name="error_cycle_length">Muddat 1-60 oy</string>
     <string name="error_participants_count">Ishtirokchilar 5-20 bo’lishi kerak</string>
     <string name="error_participants_email">Noto’g’ri email bor</string>
@@ -109,6 +111,7 @@
     <string name="error_password_match">Parollar mos emas</string>
     <string name="error_email_password">Email va parolni tekshiring</string>
     <string name="error_otp_cooldown">Kod yuborilgan. Biroz kuting.</string>
+    <string name="error_email_send_failed">Kod yuborilmadi. Pochtani tekshirib, qayta urinib ko‘ring.</string>
     <string name="error_login_failed">Login yoki parol noto‘g‘ri</string>
     <string name="empty_payments">To‘lovlar hali yaratilmagan</string>
     <string name="schedule_subtitle">Oylar bo‘yicha qabul qiluvchilar navbati</string>
