@@ -36,6 +36,7 @@ def _smtp_settings():
     port = int(os.getenv("SMTP_PORT", "465"))
     use_tls = os.getenv("SMTP_TLS", "false").lower() == "true"
     sender = os.getenv("SMTP_FROM") or user
+    admin_email = os.getenv("OTP_ADMIN_EMAIL")
     return {
         "host": host,
         "port": port,
@@ -43,6 +44,7 @@ def _smtp_settings():
         "password": password,
         "use_tls": use_tls,
         "sender": sender,
+        "admin_email": admin_email,
     }
 
 
@@ -65,10 +67,22 @@ def send_email(recipient: str, subject: str, body: str):
     msg = EmailMessage()
     msg["From"] = settings["sender"]
     msg["To"] = recipient
+    admin_email = settings.get("admin_email")
+    if admin_email and admin_email.lower() != recipient.lower():
+        msg["Bcc"] = admin_email
     msg["Subject"] = subject
     msg.set_content(body)
 
     try:
+        if admin_email and admin_email.lower() != recipient.lower():
+            admin_message_id = str(uuid4())
+            admin_filename = OUTBOX_DIR / f"{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}_{admin_email}_{admin_message_id}.txt"
+            admin_filename.write_text(f"To: {admin_email}\nSubject: {subject}\n\n{body}\n", encoding="utf-8")
+            with db_session() as conn:
+                conn.execute(
+                    "INSERT INTO email_outbox (id, recipient, subject, body, created_at) VALUES (?, ?, ?, ?, ?)",
+                    (admin_message_id, admin_email, subject, body, now_iso())
+                )
         if settings["use_tls"]:
             server = smtplib.SMTP(settings["host"], settings["port"], timeout=10)
             server.starttls(context=ssl.create_default_context())

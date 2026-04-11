@@ -17,8 +17,8 @@ android {
         applicationId = "com.gapkassa"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2601
+        versionName = "26.01"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
