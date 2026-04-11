@@ -112,6 +112,7 @@
     <string name="error_email_password">Email va parolni tekshiring</string>
     <string name="error_otp_cooldown">Kod yuborilgan. Biroz kuting.</string>
     <string name="error_email_send_failed">Kod yuborilmadi. Pochtani tekshirib, qayta urinib ko‘ring.</string>
+    <string name="otp_cooldown_timer">Qayta yuborish %1$d s dan so‘ng</string>
     <string name="error_login_failed">Login yoki parol noto‘g‘ri</string>
     <string name="empty_payments">To‘lovlar hali yaratilmagan</string>
     <string name="schedule_subtitle">Oylar bo‘yicha qabul qiluvchilar navbati</string>

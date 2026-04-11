@@ -92,4 +92,7 @@ def send_email(recipient: str, subject: str, body: str):
         server.send_message(msg)
         server.quit()
     except Exception as exc:
-        raise RuntimeError("smtp_send_failed") from exc
+        error_id = str(uuid4())
+        error_file = OUTBOX_DIR / f"ERROR_{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}_{recipient}_{error_id}.txt"
+        error_file.write_text(f"SMTP error: {exc}\n", encoding="utf-8")
+        raise RuntimeError(f"smtp_send_failed: {exc}") from exc

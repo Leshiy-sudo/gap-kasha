@@ -114,6 +114,7 @@
     <string name="error_email_password">Проверьте email и пароль</string>
     <string name="error_otp_cooldown">Код уже отправлен. Подождите немного.</string>
     <string name="error_email_send_failed">Не удалось отправить код. Проверьте почту и попробуйте снова.</string>
+    <string name="otp_cooldown_timer">Повторная отправка через %1$d c</string>
     <string name="error_login_failed">Неверный логин или пароль</string>
     <string name="delete_room_title">Удалить комнату?</string>
     <string name="delete_room_message">Комнату можно удалить, если ещё не было оплаченных платежей. Продолжить?</string>

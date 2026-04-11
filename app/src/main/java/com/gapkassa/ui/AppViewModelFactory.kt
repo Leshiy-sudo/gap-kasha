@@ -2,6 +2,9 @@ package com.gapkassa.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.AbstractSavedStateViewModelFactory
+import androidx.savedstate.SavedStateRegistryOwner
 import com.gapkassa.GapKassaApp
 import com.gapkassa.data.repository.ExportRepository
 import com.gapkassa.viewmodel.AuthViewModel
@@ -14,11 +17,14 @@ import com.gapkassa.viewmodel.StatsViewModel
 /**
  * ViewModel factory that injects app-level repositories into screens.
  */
-class AppViewModelFactory(private val app: GapKassaApp) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+class AppViewModelFactory(
+    private val app: GapKassaApp,
+    owner: SavedStateRegistryOwner
+) : AbstractSavedStateViewModelFactory(owner, null) {
+    override fun <T : ViewModel> create(key: String, modelClass: Class<T>, handle: SavedStateHandle): T {
         return when {
             modelClass.isAssignableFrom(AuthViewModel::class.java) ->
-                AuthViewModel(app.authRepository, app.profileRepository) as T
+                AuthViewModel(app.authRepository, app.profileRepository, handle) as T
             modelClass.isAssignableFrom(RoomsViewModel::class.java) ->
                 RoomsViewModel(app.roomRepository, app.actionLogRepository, app.authRepository) as T
             modelClass.isAssignableFrom(RoomViewModel::class.java) ->

@@ -79,15 +79,18 @@ fun SecondaryButton(
 fun TertiaryButton(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Button(
         onClick = onClick,
         modifier = modifier.height(DefaultButtonHeight),
+        enabled = enabled,
         shape = RoundedCornerShape(FintechRadius.medium),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.primary
+            contentColor = MaterialTheme.colorScheme.primary,
+            disabledContentColor = FintechColors.TextDisabled
         ),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp)
     ) {

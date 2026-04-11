@@ -28,7 +28,7 @@ from security import (
 APP_ENV = os.getenv("APP_ENV", "local")
 RAW_CORS_ORIGINS = os.getenv("CORS_ORIGINS", "")
 OTP_TTL_MIN = int(os.getenv("OTP_TTL_MIN", "10"))
-OTP_COOLDOWN_SEC = int(os.getenv("OTP_COOLDOWN_SEC", "60"))
+OTP_COOLDOWN_SEC = int(os.getenv("OTP_COOLDOWN_SEC", "30"))
 OTP_MAX_ATTEMPTS = int(os.getenv("OTP_MAX_ATTEMPTS", "5"))
 LOGIN_MAX_ATTEMPTS = int(os.getenv("LOGIN_MAX_ATTEMPTS", "5"))
 LOGIN_LOCKOUT_MIN = int(os.getenv("LOGIN_LOCKOUT_MIN", "15"))
@@ -526,7 +526,7 @@ def request_register_otp(payload: RegisterOtpRequest, request: Request):
             subject="Ваш код подтверждения",
             body=f"Ваш код: {code}\nОн действителен {OTP_TTL_MIN} минут.",
         )
-    except Exception:
+    except Exception as exc:
         with db_session() as conn:
             log_event(
                 conn,
@@ -535,7 +535,7 @@ def request_register_otp(payload: RegisterOtpRequest, request: Request):
                 "auth",
                 None,
                 None,
-                {"email": email},
+                {"email": email, "error": str(exc)},
                 request,
             )
 

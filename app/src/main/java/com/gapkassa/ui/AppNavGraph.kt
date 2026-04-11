@@ -3,7 +3,9 @@ package com.gapkassa.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.savedstate.SavedStateRegistryOwner
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -36,7 +38,11 @@ fun AppNavGraph() {
     val navController = rememberNavController()
     val context = LocalContext.current
     val app = context.applicationContext as GapKassaApp
-    val factory = remember { AppViewModelFactory(app) }
+    val viewModelStoreOwner = LocalViewModelStoreOwner.current
+        ?: error("No ViewModelStoreOwner was provided")
+    val savedStateOwner = viewModelStoreOwner as? SavedStateRegistryOwner
+        ?: error("ViewModelStoreOwner is not a SavedStateRegistryOwner")
+    val factory = remember(viewModelStoreOwner) { AppViewModelFactory(app, savedStateOwner) }
 
     val authViewModel: AuthViewModel = viewModel(factory = factory)
     val roomsViewModel: RoomsViewModel = viewModel(factory = factory)
@@ -84,8 +90,7 @@ fun AppNavGraph() {
             RegisterScreen(
                 viewModel = authViewModel,
                 onVerificationRequired = { navController.navigate(Routes.VERIFY_EMAIL) },
-                onBack = { navController.popBackStack() },
-                onHome = goHome
+                onBack = { navController.popBackStack() }
             )
         }
         composable(Routes.ROOMS) {
