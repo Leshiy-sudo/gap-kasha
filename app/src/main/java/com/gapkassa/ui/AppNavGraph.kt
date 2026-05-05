@@ -1,6 +1,8 @@
 package com.gapkassa.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
@@ -8,6 +10,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
@@ -15,10 +18,8 @@ import com.gapkassa.GapKassaApp
 import com.gapkassa.ui.screens.AuthScreen
 import com.gapkassa.ui.screens.CalendarScreen
 import com.gapkassa.ui.screens.CreateRoomScreen
-import com.gapkassa.ui.screens.EmailVerificationScreen
 import com.gapkassa.ui.screens.PaymentDetailScreen
 import com.gapkassa.ui.screens.ProfileScreen
-import com.gapkassa.ui.screens.RegisterScreen
 import com.gapkassa.ui.screens.RoomScreen
 import com.gapkassa.ui.screens.RoomsScreen
 import com.gapkassa.ui.screens.ScheduleScreen
@@ -29,6 +30,7 @@ import com.gapkassa.viewmodel.ProfileViewModel
 import com.gapkassa.viewmodel.RoomViewModel
 import com.gapkassa.viewmodel.RoomsViewModel
 import com.gapkassa.viewmodel.StatsViewModel
+import androidx.compose.runtime.collectAsState
 
 /**
  * Central navigation graph that wires screens and their ViewModels.
@@ -50,47 +52,44 @@ fun AppNavGraph() {
     val calendarViewModel: CalendarViewModel = viewModel(factory = factory)
     val statsViewModel: StatsViewModel = viewModel(factory = factory)
     val profileViewModel: ProfileViewModel = viewModel(factory = factory)
-    val goHome: () -> Unit = {
-        navController.navigate(Routes.ROOMS) {
-            popUpTo(Routes.ROOMS) { inclusive = false }
+    val hasStoredSession by app.authRepository.hasStoredSessionFlow.collectAsState(
+        initial = app.authRepository.hasStoredSession
+    )
+    val startDestination = if (hasStoredSession) Routes.ROOMS else Routes.AUTH
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+
+    val navigateRoot: (String) -> Unit = { route ->
+        navController.navigate(route) {
+            popUpTo(startDestination) { inclusive = true }
             launchSingleTop = true
         }
     }
+    val popBackOrNavigate: (String) -> Unit = { fallbackRoute ->
+        if (!navController.popBackStack()) {
+            navigateRoot(fallbackRoute)
+        }
+    }
+    val goHome: () -> Unit = {
+        navigateRoot(if (app.authRepository.hasStoredSession) Routes.ROOMS else Routes.AUTH)
+    }
 
-    val startDestination = if (app.authRepository.currentUserId != null) Routes.ROOMS else Routes.AUTH
+    LaunchedEffect(hasStoredSession) {
+        val currentRoute = navBackStackEntry?.destination?.route
+        when {
+            !hasStoredSession && currentRoute != Routes.AUTH -> navigateRoot(Routes.AUTH)
+            hasStoredSession && currentRoute == Routes.AUTH -> navigateRoot(Routes.ROOMS)
+        }
+    }
 
     NavHost(navController, startDestination = startDestination) {
         composable(Routes.AUTH) {
             AuthScreen(
                 viewModel = authViewModel,
-                onRegister = { navController.navigate(Routes.REGISTER) },
                 onLoggedIn = {
+                    app.onAuthenticated()
                     roomsViewModel.refreshRooms()
-                    navController.navigate(Routes.ROOMS) {
-                        popUpTo(Routes.AUTH) { inclusive = true }
-                        launchSingleTop = true
-                    }
+                    navigateRoot(Routes.ROOMS)
                 }
-            )
-        }
-        composable(Routes.VERIFY_EMAIL) {
-            EmailVerificationScreen(
-                viewModel = authViewModel,
-                onVerified = {
-                    roomsViewModel.refreshRooms()
-                    navController.navigate(Routes.ROOMS) {
-                        popUpTo(Routes.AUTH) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-                onBack = { navController.popBackStack() }
-            )
-        }
-        composable(Routes.REGISTER) {
-            RegisterScreen(
-                viewModel = authViewModel,
-                onVerificationRequired = { navController.navigate(Routes.VERIFY_EMAIL) },
-                onBack = { navController.popBackStack() }
             )
         }
         composable(Routes.ROOMS) {
@@ -105,12 +104,9 @@ fun AppNavGraph() {
             CreateRoomScreen(
                 viewModel = roomsViewModel,
                 onCreated = {
-                    navController.navigate(Routes.ROOMS) {
-                        popUpTo(Routes.CREATE_ROOM) { inclusive = true }
-                        launchSingleTop = true
-                    }
+                    navigateRoot(Routes.ROOMS)
                 },
-                onBack = { navController.popBackStack() },
+                onBack = { popBackOrNavigate(Routes.ROOMS) },
                 onHome = goHome
             )
         }
@@ -126,7 +122,7 @@ fun AppNavGraph() {
                 onOpenStats = { navController.navigate("${Routes.STATS}/$roomId") },
                 onOpenSchedule = { navController.navigate("${Routes.SCHEDULE}/$roomId") },
                 onPaymentClick = { paymentId -> navController.navigate("${Routes.PAYMENT_DETAIL}/$paymentId") },
-                onBack = { navController.popBackStack() },
+                onBack = { popBackOrNavigate(Routes.ROOMS) },
                 onHome = goHome
             )
         }
@@ -138,7 +134,7 @@ fun AppNavGraph() {
             ScheduleScreen(
                 roomId = roomId,
                 viewModel = roomViewModel,
-                onBack = { navController.popBackStack() },
+                onBack = { popBackOrNavigate("${Routes.ROOM_DETAIL}/$roomId") },
                 onHome = goHome
             )
         }
@@ -150,7 +146,7 @@ fun AppNavGraph() {
             CalendarScreen(
                 roomId = roomId,
                 viewModel = calendarViewModel,
-                onBack = { navController.popBackStack() },
+                onBack = { popBackOrNavigate("${Routes.ROOM_DETAIL}/$roomId") },
                 onHome = goHome
             )
         }
@@ -162,7 +158,7 @@ fun AppNavGraph() {
             PaymentDetailScreen(
                 paymentId = paymentId,
                 viewModel = roomViewModel,
-                onBack = { navController.popBackStack() },
+                onBack = { popBackOrNavigate(Routes.ROOMS) },
                 onHome = goHome
             )
         }
@@ -174,7 +170,7 @@ fun AppNavGraph() {
             StatsScreen(
                 roomId = roomId,
                 viewModel = statsViewModel,
-                onBack = { navController.popBackStack() },
+                onBack = { popBackOrNavigate("${Routes.ROOM_DETAIL}/$roomId") },
                 onHome = goHome
             )
         }
@@ -182,11 +178,10 @@ fun AppNavGraph() {
             ProfileScreen(
                 viewModel = profileViewModel,
                 onLogout = {
-                    navController.navigate(Routes.AUTH) {
-                        popUpTo(Routes.ROOMS) { inclusive = true }
-                    }
+                    app.onSignedOut()
+                    navigateRoot(Routes.AUTH)
                 },
-                onBack = { navController.popBackStack() },
+                onBack = { popBackOrNavigate(Routes.ROOMS) },
                 onHome = goHome
             )
         }

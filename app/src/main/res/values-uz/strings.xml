@@ -3,6 +3,12 @@
 
     <string name="auth_title">Kirish</string>
     <string name="auth_subtitle">Badallar va rotatsiyani bitta joyda boshqaring</string>
+    <string name="auth_google_card_title">Google orqali tez kirish</string>
+    <string name="auth_google_card_body">Akkauntni Google orqali tasdiqlaymiz va alohida parolsiz guruhlar, to‘lovlar va profilingizga darhol kirish beramiz.</string>
+    <string name="auth_google_chip_trusted">Ishonchli</string>
+    <string name="auth_google_chip_passwordless">Parolsiz</string>
+    <string name="auth_google_config_hint">Haqiqiy kirish uchun `GAPKASSA_GOOGLE_WEB_CLIENT_ID` ni Gradle properties yoki env orqali kiriting.</string>
+    <string name="auth_google_mock_hint">Debug rejim: bu kirish test va avtomatlashtirish uchun lokal mock Google akkauntidan foydalanadi.</string>
     <string name="register_title">Ro’yxatdan o’tish</string>
     <string name="verification_title">Emailni tasdiqlash</string>
     <string name="verification_subtitle">Biz %1$s manziliga kod yubordik. Uni pastga kiriting.</string>
@@ -40,10 +46,14 @@
     <string name="field_photo_url">Foto (URL)</string>
 
     <string name="action_login">Kirish</string>
+    <string name="action_continue_with_google">Google bilan davom etish</string>
+    <string name="action_continue_with_test_google">Test Google kirishi</string>
     <string name="action_register">Ro’yxatdan o’tish</string>
     <string name="action_send_code">Kod olish</string>
     <string name="action_verify">Tasdiqlash</string>
     <string name="action_resend_code">Kodni qayta yuborish</string>
+    <string name="action_delete_room">O‘chirish</string>
+    <string name="action_ok">OK</string>
     <string name="action_forgot_password">Parolni unutdingizmi?</string>
     <string name="action_create_account">Hisob yaratish</string>
     <string name="action_back">Orqaga</string>
@@ -59,6 +69,8 @@
     <string name="action_select">Tanlash</string>
     <string name="action_cancel">Bekor qilish</string>
     <string name="action_logout">Chiqish</string>
+    <string name="action_privacy_policy">Maxfiylik siyosati</string>
+    <string name="action_delete_account">Akkauntni o‘chirish</string>
 
     <string name="label_amount">Badal: </string>
     <string name="label_monthly_amount">Oylik badal: %1$d</string>
@@ -102,6 +114,11 @@
     <string name="error_email_exists">Email allaqachon ro‘yxatdan o‘tgan</string>
     <string name="error_login_locked">Juda ko‘p urinish. Keyinroq urinib ko‘ring.</string>
     <string name="error_user_inactive">Hisob o‘chirib qo‘yilgan. Qo‘llab-quvvatlashga murojaat qiling.</string>
+    <string name="error_google_auth_not_configured">Google kirishi hali sozlanmagan. Client ID ni tekshiring.</string>
+    <string name="error_google_auth_unavailable">Serverda Google kirishi vaqtincha ishlamayapti. Keyinroq urinib ko‘ring.</string>
+    <string name="error_google_auth_failed">Google orqali kirib bo‘lmadi. Qayta urinib ko‘ring.</string>
+    <string name="error_google_email_not_verified">Davom etish uchun Google akkauntingizdagi email tasdiqlangan bo‘lishi kerak.</string>
+    <string name="error_google_auth_conflict">Bu Google akkaunti mavjud profil bilan to‘qnashdi. Qo‘lda bog‘lash kerak.</string>
     <string name="error_phone">Telefon raqami noto’g’ri</string>
     <string name="error_password">Parol 8–30 belgi</string>
     <string name="error_verification_code">Xatdagi kodni kiriting</string>
@@ -114,15 +131,37 @@
     <string name="error_email_send_failed">Kod yuborilmadi. Pochtani tekshirib, qayta urinib ko‘ring.</string>
     <string name="otp_cooldown_timer">Qayta yuborish %1$d s dan so‘ng</string>
     <string name="error_login_failed">Login yoki parol noto‘g‘ri</string>
+    <string name="error_delete_account_failed">Akkauntni o‘chirib bo‘lmadi. Qayta urinib ko‘ring.</string>
+    <string name="delete_room_title">Guruh o‘chirilsinmi?</string>
+    <string name="delete_room_message">Guruhni hali birorta to‘langan to‘lov bo‘lmasa o‘chirish mumkin. Davom etilsinmi?</string>
+    <string name="delete_room_failed_title">O‘chirib bo‘lmadi</string>
+    <string name="delete_account_title">Akkaunt o‘chirilsinmi?</string>
+    <string name="delete_account_message">Akkauntni qayta tiklab bo‘lmaydi. Siz yaratgan guruhlar ham o‘chirilishi mumkin. Davom etilsinmi?</string>
+    <string name="notification_channel_general">Asosiy bildirishnomalar</string>
+    <string name="notification_channel_general_description">GapKassa xizmat bildirishnomalari</string>
+    <string name="error_room_delete_paid">Guruhni o‘chirib bo‘lmaydi: to‘langan to‘lovlar bor.</string>
+    <string name="error_room_delete_forbidden">Guruhni faqat yaratuvchi o‘chira oladi.</string>
+    <string name="error_room_delete_not_found">Guruh topilmadi.</string>
+    <string name="error_room_delete_unknown">Guruhni o‘chirib bo‘lmadi. Qayta urinib ko‘ring.</string>
     <string name="empty_payments">To‘lovlar hali yaratilmagan</string>
     <string name="schedule_subtitle">Oylar bo‘yicha qabul qiluvchilar navbati</string>
     <string name="schedule_hint">Tartibni sozlash uchun “O‘zgartirish” tugmasini bosing</string>
     <string name="schedule_confirm_title">O‘zgarishlarni tasdiqlash</string>
     <string name="schedule_confirm_message">Yangi tartib va qabul qiluvchilarni saqlaysizmi?</string>
+    <string name="schedule_admin_only_hint">Jadvalni faqat yetakchi o‘zgartira oladi.</string>
+    <string name="schedule_error_invalid_receiver">Qabul qiluvchi guruh ishtirokchisi bo‘lishi kerak.</string>
+    <string name="schedule_error_save">Jadvalni saqlab bo‘lmadi. Ruxsatni tekshirib, qayta urinib ko‘ring.</string>
 
     <string name="verification_hint">Xatdagi havolani joylashtirsangiz ham bo‘ladi — ilova kodni ajratib oladi.</string>
     <string name="message_verification_sent">Kodli xat yuborildi. Pochtangizni tekshiring.</string>
     <string name="helper_register_otp">Tasdiqlash kodi emailingizga yuboriladi.</string>
+
+    <string name="ad_title">Reklama bloki</string>
+    <string name="ad_badge">AD</string>
+    <string name="ad_body">Integratsiya uchun ixcham joy. Kerakli hamkorni bir necha qadamda ulaymiz.</string>
+    <string name="ad_cta">Ulash</string>
+    <string name="ad_test_title">Test integratsiya</string>
+    <string name="ad_test_body">GapPay: 30 aprelgacha komissiyaga 20%% chegirma. Ulanish 5 daqiqa.</string>
 
     <string name="field_last_name">Familiya (ixtiyoriy)</string>
     <string name="field_patronymic">Otasining ismi (ixtiyoriy)</string>

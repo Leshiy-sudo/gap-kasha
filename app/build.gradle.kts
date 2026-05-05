@@ -5,20 +5,25 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+fun gradleOrEnv(name: String, fallback: String): String =
+    providers.gradleProperty(name).orNull
+        ?: System.getenv(name)
+        ?: fallback
+
 if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
 
 android {
     namespace = "com.gapkassa"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.gapkassa"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 2601
-        versionName = "26.01"
+        targetSdk = 35
+        versionCode = 2602
+        versionName = "26.02"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -26,11 +31,49 @@ android {
     buildTypes {
         debug {
             // Emulator uses 10.0.2.2 to reach host machine.
-            buildConfigField("String", "API_BASE_URL", "\"https://communications-both-catherine-decided.trycloudflare.com\"")
+            buildConfigField(
+                "String",
+                "API_BASE_URL",
+                "\"${gradleOrEnv("GAPKASSA_DEBUG_API_URL", "http://10.0.2.2:8080/")}\""
+            )
+            buildConfigField(
+                "String",
+                "GOOGLE_WEB_CLIENT_ID",
+                "\"${gradleOrEnv("GAPKASSA_GOOGLE_WEB_CLIENT_ID", "")}\""
+            )
+            buildConfigField("boolean", "GOOGLE_AUTH_ALLOW_MOCK", "true")
+            buildConfigField(
+                "String",
+                "GOOGLE_AUTH_MOCK_EMAIL",
+                "\"${gradleOrEnv("GAPKASSA_GOOGLE_MOCK_EMAIL", "uiqa@example.com")}\""
+            )
+            buildConfigField(
+                "String",
+                "GOOGLE_AUTH_MOCK_NAME",
+                "\"${gradleOrEnv("GAPKASSA_GOOGLE_MOCK_NAME", "Uiqa")}\""
+            )
+            buildConfigField(
+                "String",
+                "GOOGLE_AUTH_MOCK_SUBJECT",
+                "\"${gradleOrEnv("GAPKASSA_GOOGLE_MOCK_SUBJECT", "android-ui-test")}\""
+            )
         }
         release {
             isMinifyEnabled = false
-            buildConfigField("String", "API_BASE_URL", "\"https://api.gapkassa.local\"")
+            buildConfigField(
+                "String",
+                "API_BASE_URL",
+                "\"${gradleOrEnv("GAPKASSA_RELEASE_API_URL", "https://api.gapkassa.invalid/")}\""
+            )
+            buildConfigField(
+                "String",
+                "GOOGLE_WEB_CLIENT_ID",
+                "\"${gradleOrEnv("GAPKASSA_GOOGLE_WEB_CLIENT_ID", "")}\""
+            )
+            buildConfigField("boolean", "GOOGLE_AUTH_ALLOW_MOCK", "false")
+            buildConfigField("String", "GOOGLE_AUTH_MOCK_EMAIL", "\"\"")
+            buildConfigField("String", "GOOGLE_AUTH_MOCK_NAME", "\"\"")
+            buildConfigField("String", "GOOGLE_AUTH_MOCK_SUBJECT", "\"\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -50,6 +93,12 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    bundle {
+        language {
+            enableSplit = false
+        }
     }
 
     packaging {
@@ -78,16 +127,21 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
     implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.tracing:tracing:1.2.0")
+    implementation("androidx.credentials:credentials:1.5.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
     implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
-    implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-analytics")
 
     implementation("androidx.datastore:datastore-preferences:1.1.1")
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.security:security-crypto:1.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
@@ -100,6 +154,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
+    androidTestImplementation("androidx.tracing:tracing:1.2.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

@@ -34,7 +34,7 @@ class AppViewModelFactory(
             modelClass.isAssignableFrom(StatsViewModel::class.java) ->
                 StatsViewModel(app.roomRepository, ExportRepository(app.applicationContext)) as T
             modelClass.isAssignableFrom(ProfileViewModel::class.java) ->
-                ProfileViewModel(app.authRepository, app.actionLogRepository, app.profileRepository) as T
+                ProfileViewModel(app.authRepository, app.actionLogRepository, app.profileRepository, app.roomRepository) as T
             else -> throw IllegalArgumentException("Unknown ViewModel ${modelClass.name}")
         }
     }

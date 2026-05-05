@@ -22,12 +22,40 @@ data class LoginRequest(
     val password: String
 )
 
+data class GoogleAuthRequest(
+    @Json(name = "id_token") val idToken: String,
+    val nonce: String?
+)
+
 data class RefreshRequest(
     @Json(name = "refresh_token") val refreshToken: String
 )
 
 data class LogoutRequest(
     @Json(name = "refresh_token") val refreshToken: String?
+)
+
+data class DeviceTokenRequest(
+    val token: String,
+    val platform: String = "android"
+)
+
+data class ClientErrorReportRequest(
+    val kind: String,
+    @Json(name = "report_id") val reportId: String,
+    @Json(name = "occurred_at") val occurredAt: String,
+    @Json(name = "exception_type") val exceptionType: String?,
+    val message: String,
+    val stacktrace: String?,
+    @Json(name = "thread_name") val threadName: String?,
+    @Json(name = "app_version") val appVersion: String,
+    @Json(name = "build_type") val buildType: String,
+    @Json(name = "package_name") val packageName: String,
+    @Json(name = "api_base_url") val apiBaseUrl: String,
+    @Json(name = "device_model") val deviceModel: String,
+    @Json(name = "android_version") val androidVersion: String,
+    @Json(name = "user_id") val userId: String?,
+    @Json(name = "user_email") val userEmail: String?
 )
 
 data class MessageResponse(

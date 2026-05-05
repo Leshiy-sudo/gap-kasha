@@ -1,0 +1,112 @@
+name: GapKassa CI
+
+on:
+  push:
+    branches:
+      - main
+      - "codex/**"
+  pull_request:
+
+jobs:
+  backend-and-android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: /home/runner/work/gap-kassa/gap-kassa
+    env:
+      APP_ENV: local
+      DB_PATH: /home/runner/work/gap-kassa/gap-kassa/.ci/app.db
+      UI_TEST_EMAIL: uiqa@example.com
+      UI_TEST_PASSWORD: 12345678
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r local-backend/requirements-dev.txt
+
+      - name: Run backend test suite
+        run: pytest -q local-backend/tests
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Run Android unit tests and lint
+        run: ./gradlew test lint assembleDebug
+
+      - name: Start backend server
+        run: |
+          mkdir -p .ci
+          cd local-backend
+          nohup python -m uvicorn main:app --host 0.0.0.0 --port 8080 > ../.ci/backend.log 2>&1 &
+
+      - name: Wait for backend health
+        run: |
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8080/health > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend failed to start"
+          cat .ci/backend.log
+          exit 1
+
+      - name: Run connected Android UI tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_7
+          script: |
+            cd /home/runner/work/gap-kassa/gap-kassa
+            adb wait-for-device
+            adb shell settings put global window_animation_scale 0
+            adb shell settings put global transition_animation_scale 0
+            adb shell settings put global animator_duration_scale 0
+
+            python local-backend/tools/seed_ui_test_data.py
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.gapkassa.LoginUiTest#googleMockLoginWorks
+
+            python local-backend/tools/seed_ui_test_data.py
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.gapkassa.CreateRoomUiTest#createRoomFromUiWorks
+
+            python local-backend/tools/seed_ui_test_data.py
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.gapkassa.DeleteAccountUiTest#deleteAccountFromProfileReturnsToAuth
+
+            python local-backend/tools/seed_ui_test_data.py
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.gapkassa.DeleteRoomUiTest#deleteRoomFromUiWorks
+
+            python local-backend/tools/seed_ui_test_data.py
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.gapkassa.OfflineStartUiTest#authorizedUserKeepsAccessOfflineAfterRecreate
+
+      - name: Upload Android test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-reports
+          path: |
+            /home/runner/work/gap-kassa/gap-kassa/app/build/reports/androidTests/connected
+            /home/runner/work/gap-kassa/gap-kassa/app/build/outputs/androidTest-results/connected
+            /home/runner/work/gap-kassa/gap-kassa/app/build/reports/lint-results-debug.html
+            /home/runner/work/gap-kassa/gap-kassa/app/build/reports/lint-results-debug.xml
+
+      - name: Upload backend log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-log
+          path: /home/runner/work/gap-kassa/gap-kassa/.ci/backend.log

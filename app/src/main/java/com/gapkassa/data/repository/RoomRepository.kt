@@ -208,6 +208,10 @@ class RoomRepository(
         roomDao.deleteById(roomId)
     }
 
+    suspend fun clearLocalCache() {
+        database.clearAllTables()
+    }
+
     fun generatePayments(
         roomId: String,
         memberIds: List<String>,

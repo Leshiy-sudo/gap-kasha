@@ -6,6 +6,7 @@ import com.gapkassa.data.model.UserProfile
 import com.gapkassa.data.repository.ActionLogRepository
 import com.gapkassa.data.repository.AuthRepository
 import com.gapkassa.data.repository.ProfileRepository
+import com.gapkassa.data.repository.RoomRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -17,10 +18,11 @@ import kotlinx.coroutines.launch
 class ProfileViewModel(
     private val authRepository: AuthRepository,
     private val actionLogRepository: ActionLogRepository,
-    private val profileRepository: ProfileRepository
+    private val profileRepository: ProfileRepository,
+    private val roomRepository: RoomRepository
 ) : ViewModel() {
     val profile: StateFlow<UserProfile> = profileRepository.profileFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserProfile("", "", "", "", "", ""))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), profileRepository.profileFlow.value)
 
     init {
         viewModelScope.launch {
@@ -36,6 +38,8 @@ class ProfileViewModel(
             runCatching { authRepository.logoutRemote() }.onFailure {
                 authRepository.logout()
             }
+            roomRepository.clearLocalCache()
+            profileRepository.clearCachedProfile()
             onDone()
         }
     }
@@ -44,6 +48,23 @@ class ProfileViewModel(
         viewModelScope.launch {
             profileRepository.saveProfile(profile)
             onDone()
+        }
+    }
+
+    fun deleteAccount(onDone: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            authRepository.currentUserId?.let { userId ->
+                actionLogRepository.log(userId, null, "delete_account_requested")
+            }
+            authRepository.deleteAccount()
+                .onSuccess {
+                    roomRepository.clearLocalCache()
+                    profileRepository.clearCachedProfile()
+                    onDone()
+                }
+                .onFailure { error ->
+                    onError(error.message ?: "Не удалось удалить аккаунт")
+                }
         }
     }
 }

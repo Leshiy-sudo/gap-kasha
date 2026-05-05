@@ -2,6 +2,7 @@ package com.gapkassa.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,13 +14,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
-import com.gapkassa.R
+import com.gapkassa.ui.LocalAppContainer
 import com.gapkassa.ui.theme.FintechSpacing
 
 /**
@@ -30,8 +33,22 @@ fun AdSlot(
     modifier: Modifier = Modifier,
     onAction: (() -> Unit)? = null
 ) {
+    val app = LocalAppContainer.current
+    val config by app.remoteConfigRepository.configFlow.collectAsState()
+    val ad = config.ads
+    if (!ad.enabled) return
+    val uriHandler = LocalUriHandler.current
+    val isClickable = onAction != null || !ad.targetUrl.isNullOrBlank()
+
     Surface(
-        modifier = modifier,
+        modifier = if (isClickable) {
+            modifier.clickable {
+                onAction?.invoke()
+                ad.targetUrl?.takeIf { it.isNotBlank() }?.let(uriHandler::openUri)
+            }
+        } else {
+            modifier
+        },
         shape = RoundedCornerShape(0.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp,
@@ -50,7 +67,7 @@ fun AdSlot(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = stringResource(R.string.ad_badge),
+                    text = ad.badge,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
@@ -59,17 +76,29 @@ fun AdSlot(
                         .padding(horizontal = 4.dp, vertical = 1.dp)
                 )
                 Text(
-                    text = stringResource(R.string.ad_test_title),
+                    text = ad.title,
                     style = MaterialTheme.typography.labelLarge
                 )
             }
             Text(
-                text = stringResource(R.string.ad_test_body),
+                text = ad.body,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
+            if (!ad.cta.isNullOrBlank()) {
+                Text(
+                    text = ad.cta,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
         }
     }
 }

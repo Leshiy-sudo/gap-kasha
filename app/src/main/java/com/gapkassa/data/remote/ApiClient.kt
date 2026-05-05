@@ -63,7 +63,10 @@ class ApiClient(tokenStore: TokenStore) {
 
     private val authenticator = Authenticator { _: Route?, response: Response ->
         if (responseCount(response) >= 2) return@Authenticator null
-        val refreshToken = tokenStore.refreshToken ?: return@Authenticator null
+        val refreshToken = tokenStore.refreshToken ?: run {
+            tokenStore.clear()
+            return@Authenticator null
+        }
         synchronized(refreshLock) {
             val requestToken = response.request.header("Authorization")?.removePrefix("Bearer ")?.trim()
             val latestToken = tokenStore.accessToken
@@ -75,12 +78,19 @@ class ApiClient(tokenStore: TokenStore) {
             val refreshResponse = runCatching {
                 refreshApi.refresh(RefreshRequest(refreshToken)).execute()
             }.getOrNull() ?: return@Authenticator null
-            if (!refreshResponse.isSuccessful) return@Authenticator null
+            if (!refreshResponse.isSuccessful) {
+                if (refreshResponse.code() == 401 || refreshResponse.code() == 403) {
+                    tokenStore.clear()
+                }
+                return@Authenticator null
+            }
             val body = refreshResponse.body() ?: return@Authenticator null
-            tokenStore.accessToken = body.accessToken
-            tokenStore.refreshToken = body.refreshToken
-            tokenStore.userId = body.user.id
-            tokenStore.userEmail = body.user.email
+            tokenStore.saveSession(
+                accessToken = body.accessToken,
+                refreshToken = body.refreshToken,
+                userId = body.user.id,
+                userEmail = body.user.email
+            )
             response.request.newBuilder()
                 .header("Authorization", "Bearer ${body.accessToken}")
                 .build()

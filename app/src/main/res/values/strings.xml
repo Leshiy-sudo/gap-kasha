@@ -1,8 +1,15 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:locale="ru">
     <string name="app_name">Gap Kassa</string>
 
     <string name="auth_title">Вход</string>
     <string name="auth_subtitle">Управляйте взносами и ротацией в одном месте</string>
+    <string name="auth_google_card_title">Быстрый вход через Google</string>
+    <string name="auth_google_card_body">Подтверждаем аккаунт через Google и сразу открываем доступ к вашим комнатам, платежам и профилю без отдельного пароля.</string>
+    <string name="auth_google_chip_trusted">Надёжно</string>
+    <string name="auth_google_chip_passwordless">Без пароля</string>
+    <string name="auth_google_config_hint">Для реального входа укажите `GAPKASSA_GOOGLE_WEB_CLIENT_ID` в Gradle properties или env.</string>
+    <string name="auth_google_mock_hint">Debug-режим: этот вход использует локальный mock Google-аккаунт для тестов и автоматизации.</string>
     <string name="register_title">Регистрация</string>
     <string name="verification_title">Подтверждение email</string>
     <string name="verification_subtitle">Мы отправили код на %1$s. Введите его ниже.</string>
@@ -40,6 +47,8 @@
     <string name="field_photo_url">Фото (URL)</string>
 
     <string name="action_login">Войти</string>
+    <string name="action_continue_with_google">Продолжить с Google</string>
+    <string name="action_continue_with_test_google">Тестовый Google вход</string>
     <string name="action_register">Регистрация</string>
     <string name="action_send_code">Получить код</string>
     <string name="action_verify">Подтвердить</string>
@@ -61,6 +70,8 @@
     <string name="action_export_csv">Экспорт CSV</string>
     <string name="action_save">Сохранить</string>
     <string name="action_logout">Выйти</string>
+    <string name="action_privacy_policy">Политика конфиденциальности</string>
+    <string name="action_delete_account">Удалить аккаунт</string>
 
     <string name="label_amount">Взнос: </string>
     <string name="label_monthly_amount">Ежемесячный взнос: %1$d</string>
@@ -104,6 +115,11 @@
     <string name="error_email_exists">Email уже зарегистрирован</string>
     <string name="error_login_locked">Слишком много попыток. Попробуйте позже.</string>
     <string name="error_user_inactive">Аккаунт отключён. Обратитесь в поддержку.</string>
+    <string name="error_google_auth_not_configured">Google вход пока не настроен. Проверьте client ID.</string>
+    <string name="error_google_auth_unavailable">Google вход временно недоступен на сервере. Попробуйте позже.</string>
+    <string name="error_google_auth_failed">Не удалось выполнить вход через Google. Попробуйте ещё раз.</string>
+    <string name="error_google_email_not_verified">Подтвердите email в Google-аккаунте, чтобы продолжить.</string>
+    <string name="error_google_auth_conflict">Этот Google-аккаунт конфликтует с существующим профилем. Нужна ручная привязка.</string>
     <string name="error_phone">Введите корректный номер</string>
     <string name="error_password">Пароль 8–30 символов</string>
     <string name="error_verification_code">Введите код из письма</string>
@@ -116,9 +132,14 @@
     <string name="error_email_send_failed">Не удалось отправить код. Проверьте почту и попробуйте снова.</string>
     <string name="otp_cooldown_timer">Повторная отправка через %1$d c</string>
     <string name="error_login_failed">Неверный логин или пароль</string>
+    <string name="error_delete_account_failed">Не удалось удалить аккаунт. Попробуйте ещё раз.</string>
     <string name="delete_room_title">Удалить комнату?</string>
     <string name="delete_room_message">Комнату можно удалить, если ещё не было оплаченных платежей. Продолжить?</string>
     <string name="delete_room_failed_title">Не удалось удалить</string>
+    <string name="delete_account_title">Удалить аккаунт?</string>
+    <string name="delete_account_message">Аккаунт будет удалён без возможности восстановления. Комнаты, созданные вами, тоже могут быть удалены. Продолжить?</string>
+    <string name="notification_channel_general">Основные уведомления</string>
+    <string name="notification_channel_general_description">Сервисные уведомления GapKassa</string>
     <string name="error_room_delete_paid">Нельзя удалить комнату: есть оплаченные платежи.</string>
     <string name="error_room_delete_forbidden">Удаление доступно только создателю комнаты.</string>
     <string name="error_room_delete_not_found">Комната не найдена.</string>
@@ -141,7 +162,7 @@
     <string name="ad_body">Лаконичное место для интеграции. Подключим нужного партнёра за пару шагов.</string>
     <string name="ad_cta">Подключить</string>
     <string name="ad_test_title">Тестовая интеграция</string>
-    <string name="ad_test_body">GapPay: скидка 20% на комиссии до 30 апреля. Подключение за 5 минут.</string>
+    <string name="ad_test_body">GapPay: скидка 20%% на комиссии до 30 апреля. Подключение за 5 минут.</string>
 
     <string name="field_last_name">Фамилия (необязательно)</string>
     <string name="field_patronymic">Отчество (необязательно)</string>

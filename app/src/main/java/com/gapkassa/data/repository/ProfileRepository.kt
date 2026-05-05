@@ -1,6 +1,7 @@
 package com.gapkassa.data.repository
 
 import com.gapkassa.data.model.UserProfile
+import com.gapkassa.data.preferences.ProfileCacheStore
 import com.gapkassa.data.remote.BackendApi
 import com.gapkassa.data.remote.ProfileUpdateRequest
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,15 +11,27 @@ import kotlinx.coroutines.flow.StateFlow
  * Profile source of truth backed by API.
  */
 class ProfileRepository(
-    private val api: BackendApi
+    private val api: BackendApi,
+    private val profileCacheStore: ProfileCacheStore
 ) {
-    private val _profile = MutableStateFlow(UserProfile("", "", "", "", "", ""))
+    private val emptyProfile = UserProfile("", "", "", "", "", "")
+    private val _profile = MutableStateFlow(profileCacheStore.read())
     val profileFlow: StateFlow<UserProfile> = _profile
+
+    fun cacheProfile(profile: UserProfile) {
+        profileCacheStore.write(profile)
+        _profile.value = profile
+    }
+
+    fun clearCachedProfile() {
+        profileCacheStore.clear()
+        _profile.value = emptyProfile
+    }
 
     suspend fun refreshProfile(): UserProfile {
         val user = api.me()
         val profile = user.toProfile()
-        _profile.value = profile
+        cacheProfile(profile)
         return profile
     }
 
@@ -33,7 +46,7 @@ class ProfileRepository(
             )
         )
         val updated = user.toProfile()
-        _profile.value = updated
+        cacheProfile(updated)
         return updated
     }
 

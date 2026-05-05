@@ -1,10 +1,11 @@
+import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 from datetime import datetime
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "data" / "app.db"
+DB_PATH = Path(os.getenv("DB_PATH", str(BASE_DIR / "data" / "app.db"))).expanduser()
 
 
 def get_connection() -> sqlite3.Connection:
@@ -32,6 +33,8 @@ def init_db():
             CREATE TABLE IF NOT EXISTS users (
                 id TEXT PRIMARY KEY,
                 email TEXT UNIQUE NOT NULL,
+                auth_provider TEXT NOT NULL DEFAULT 'email',
+                google_sub TEXT,
                 name TEXT,
                 last_name TEXT,
                 patronymic TEXT,
@@ -66,6 +69,15 @@ def init_db():
                 revoked_at TEXT,
                 ip TEXT,
                 user_agent TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS device_tokens (
+                token TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                platform TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             );
 
@@ -144,17 +156,40 @@ def init_db():
                 created_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS app_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                updated_by TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS app_content (
+                section TEXT NOT NULL,
+                locale TEXT NOT NULL,
+                content_key TEXT NOT NULL,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                updated_by TEXT,
+                PRIMARY KEY (section, locale, content_key)
+            );
             CREATE INDEX IF NOT EXISTS idx_login_attempts_email_time ON login_attempts(email, created_at);
             """
         )
         ensure_user_columns(conn)
         ensure_room_columns(conn)
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub_unique ON users(google_sub) WHERE google_sub IS NOT NULL"
+        )
         conn.commit()
 
 
 def ensure_user_columns(conn: sqlite3.Connection):
     existing = {row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()}
     alterations = []
+    if "auth_provider" not in existing:
+        alterations.append("ALTER TABLE users ADD COLUMN auth_provider TEXT NOT NULL DEFAULT 'email'")
+    if "google_sub" not in existing:
+        alterations.append("ALTER TABLE users ADD COLUMN google_sub TEXT")
     if "last_name" not in existing:
         alterations.append("ALTER TABLE users ADD COLUMN last_name TEXT")
     if "patronymic" not in existing:

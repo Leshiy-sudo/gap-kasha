@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.gapkassa.BuildConfig
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 class TokenStore(context: Context) {
     @Volatile
@@ -34,12 +36,15 @@ class TokenStore(context: Context) {
         // Fallback for local/emulator environments where encrypted prefs might fail.
         context.getSharedPreferences("gap_kassa_tokens_plain", Context.MODE_PRIVATE)
     }
+    private val _hasStoredSession = MutableStateFlow(computeHasStoredSession())
+    val hasStoredSessionFlow: StateFlow<Boolean> = _hasStoredSession
 
     var accessToken: String?
         get() = cachedAccessToken ?: prefs.getString(KEY_ACCESS, null)
         set(value) {
             cachedAccessToken = value
             prefs.edit().putString(KEY_ACCESS, value).apply()
+            publishSessionState()
         }
 
     var refreshToken: String?
@@ -47,6 +52,7 @@ class TokenStore(context: Context) {
         set(value) {
             cachedRefreshToken = value
             prefs.edit().putString(KEY_REFRESH, value).apply()
+            publishSessionState()
         }
 
     var userId: String?
@@ -54,6 +60,7 @@ class TokenStore(context: Context) {
         set(value) {
             cachedUserId = value
             prefs.edit().putString(KEY_USER_ID, value).apply()
+            publishSessionState()
         }
 
     var userEmail: String?
@@ -63,12 +70,47 @@ class TokenStore(context: Context) {
             prefs.edit().putString(KEY_USER_EMAIL, value).apply()
         }
 
+    val hasStoredSession: Boolean
+        get() = computeHasStoredSession()
+
+    fun saveSession(
+        accessToken: String,
+        refreshToken: String,
+        userId: String,
+        userEmail: String
+    ) {
+        cachedAccessToken = accessToken
+        cachedRefreshToken = refreshToken
+        cachedUserId = userId
+        cachedUserEmail = userEmail
+        prefs.edit()
+            .putString(KEY_ACCESS, accessToken)
+            .putString(KEY_REFRESH, refreshToken)
+            .putString(KEY_USER_ID, userId)
+            .putString(KEY_USER_EMAIL, userEmail)
+            .apply()
+        publishSessionState()
+    }
+
     fun clear() {
         cachedAccessToken = null
         cachedRefreshToken = null
         cachedUserId = null
         cachedUserEmail = null
-        prefs.edit().clear().apply()
+        prefs.edit().clear().commit()
+        publishSessionState()
+    }
+
+    private fun computeHasStoredSession(): Boolean {
+        val storedUserId = cachedUserId ?: prefs.getString(KEY_USER_ID, null)
+        val storedAccessToken = cachedAccessToken ?: prefs.getString(KEY_ACCESS, null)
+        val storedRefreshToken = cachedRefreshToken ?: prefs.getString(KEY_REFRESH, null)
+        return !storedUserId.isNullOrBlank() &&
+            (!storedAccessToken.isNullOrBlank() || !storedRefreshToken.isNullOrBlank())
+    }
+
+    private fun publishSessionState() {
+        _hasStoredSession.value = computeHasStoredSession()
     }
 
     private companion object {

@@ -6,8 +6,12 @@ import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface BackendApi {
+    @GET("app/config")
+    suspend fun appConfig(@Query("lang") language: String): AppConfigResponse
+
     @POST("auth/request-otp")
     suspend fun requestRegisterOtp(@Body request: RegisterRequest): MessageResponse
 
@@ -17,14 +21,26 @@ interface BackendApi {
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): AuthResponse
 
+    @POST("auth/google")
+    suspend fun googleAuth(@Body request: GoogleAuthRequest): AuthResponse
+
     @POST("auth/refresh")
     suspend fun refresh(@Body request: RefreshRequest): AuthResponse
 
     @POST("auth/logout")
     suspend fun logout(@Body request: LogoutRequest): MessageResponse
 
+    @POST("devices/fcm-token")
+    suspend fun registerDeviceToken(@Body request: DeviceTokenRequest): MessageResponse
+
+    @POST("client-errors")
+    suspend fun reportClientError(@Body request: ClientErrorReportRequest): MessageResponse
+
     @GET("me")
     suspend fun me(): UserDto
+
+    @DELETE("me")
+    suspend fun deleteMe(): MessageResponse
 
     @PATCH("me")
     suspend fun updateMe(@Body request: ProfileUpdateRequest): UserDto
