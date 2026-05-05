@@ -14,12 +14,21 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import retrofit2.HttpException
 
+private fun isLocalApiBuild(): Boolean {
+    val url = BuildConfig.API_BASE_URL.lowercase()
+    return url.contains("10.0.2.2") ||
+        url.contains("127.0.0.1") ||
+        url.contains("localhost")
+}
+
 data class AuthUiState(
     val isLoading: Boolean = false,
     val errorResId: Int? = null,
     val errorMessage: String? = null,
     val isGoogleConfigured: Boolean = BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank(),
-    val isMockGoogleAvailable: Boolean = BuildConfig.DEBUG && BuildConfig.GOOGLE_AUTH_ALLOW_MOCK
+    val isMockGoogleAvailable: Boolean = BuildConfig.DEBUG &&
+        BuildConfig.GOOGLE_AUTH_ALLOW_MOCK &&
+        isLocalApiBuild()
 )
 
 /**
