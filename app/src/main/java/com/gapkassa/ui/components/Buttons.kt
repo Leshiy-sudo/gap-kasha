@@ -119,7 +119,7 @@ fun GoogleSignInButton(
     val applied = if (fullWidth) modifier.fillMaxWidth() else modifier
     OutlinedButton(
         onClick = onClick,
-        modifier = applied.height(DefaultButtonHeight),
+        modifier = applied.height(48.dp),
         enabled = enabled,
         shape = RoundedCornerShape(FintechRadius.medium),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
@@ -129,12 +129,12 @@ fun GoogleSignInButton(
             disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
             disabledContentColor = FintechColors.TextDisabled
         ),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Row {
-            GoogleMarkIcon(modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(text = text, style = MaterialTheme.typography.labelLarge)
+            GoogleMarkIcon(modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(text = text, style = MaterialTheme.typography.labelMedium)
         }
     }
 }

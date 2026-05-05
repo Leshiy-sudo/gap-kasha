@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.util.Base64
+import android.util.Log
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
@@ -15,6 +16,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import org.json.JSONObject
 import java.security.SecureRandom
+import android.os.SystemClock
 
 data class GoogleAuthToken(
     val idToken: String,
@@ -41,6 +43,7 @@ class GoogleAuthManager(context: Context) {
             throw GoogleAuthException("google_auth_not_configured")
         }
 
+        val startedAt = SystemClock.elapsedRealtime()
         val nonce = generateNonce()
         val request = GetCredentialRequest.Builder()
             .addCredentialOption(
@@ -53,9 +56,9 @@ class GoogleAuthManager(context: Context) {
         val credential = try {
             credentialManager.getCredential(activity, request).credential
         } catch (error: GetCredentialCancellationException) {
-            throw GoogleAuthException("google_auth_cancelled", error)
+            throw mapCancellationError(error, startedAt)
         } catch (error: Exception) {
-            throw GoogleAuthException("google_auth_failed", error)
+            throw mapProviderError(error)
         }
 
         if (credential !is CustomCredential ||
@@ -106,6 +109,49 @@ class GoogleAuthManager(context: Context) {
             bytes,
             Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING
         )
+    }
+
+    private fun mapCancellationError(
+        error: GetCredentialCancellationException,
+        startedAt: Long
+    ): GoogleAuthException {
+        val elapsedMs = SystemClock.elapsedRealtime() - startedAt
+        Log.w(TAG, "Google credential flow cancelled after ${elapsedMs}ms", error)
+        return if (elapsedMs >= PROVIDER_INTERRUPTED_THRESHOLD_MS) {
+            GoogleAuthException("google_auth_interrupted", error)
+        } else {
+            GoogleAuthException("google_auth_cancelled", error)
+        }
+    }
+
+    private fun mapProviderError(error: Exception): GoogleAuthException {
+        val message = buildString {
+            append(error::class.java.name)
+            if (!error.message.isNullOrBlank()) {
+                append(": ")
+                append(error.message)
+            }
+            if (!error.cause?.message.isNullOrBlank()) {
+                append(" | cause=")
+                append(error.cause?.message)
+            }
+        }
+        Log.w(TAG, "Google credential request failed: $message", error)
+
+        val normalized = message.lowercase()
+        return when {
+            normalized.contains("unregistered_on_api_console") ->
+                GoogleAuthException("google_auth_android_client_not_registered", error)
+            error is GetCredentialCancellationException &&
+                (normalized.contains("cancelled") || normalized.contains("canceled")) ->
+                GoogleAuthException("google_auth_cancelled", error)
+            else -> GoogleAuthException("google_auth_failed", error)
+        }
+    }
+
+    private companion object {
+        const val TAG = "GoogleAuthManager"
+        const val PROVIDER_INTERRUPTED_THRESHOLD_MS = 1_200L
     }
 }
 

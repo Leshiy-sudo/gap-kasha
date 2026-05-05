@@ -116,6 +116,8 @@
     <string name="error_login_locked">Слишком много попыток. Попробуйте позже.</string>
     <string name="error_user_inactive">Аккаунт отключён. Обратитесь в поддержку.</string>
     <string name="error_google_auth_not_configured">Google вход пока не настроен. Проверьте client ID.</string>
+    <string name="error_google_auth_android_client_not_registered">Google вход для этой сборки не зарегистрирован. Нужно добавить Android SHA-ключ приложения в Google Console/Firebase.</string>
+    <string name="error_google_auth_interrupted">Google вход прервался после выбора аккаунта. Обычно это значит, что Android SHA-ключ этой сборки ещё не добавлен в Google Console/Firebase.</string>
     <string name="error_google_auth_unavailable">Google вход временно недоступен на сервере. Попробуйте позже.</string>
     <string name="error_google_auth_failed">Не удалось выполнить вход через Google. Попробуйте ещё раз.</string>
     <string name="error_google_email_not_verified">Подтвердите email в Google-аккаунте, чтобы продолжить.</string>

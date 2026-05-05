@@ -115,6 +115,8 @@
     <string name="error_login_locked">Juda ko‘p urinish. Keyinroq urinib ko‘ring.</string>
     <string name="error_user_inactive">Hisob o‘chirib qo‘yilgan. Qo‘llab-quvvatlashga murojaat qiling.</string>
     <string name="error_google_auth_not_configured">Google kirishi hali sozlanmagan. Client ID ni tekshiring.</string>
+    <string name="error_google_auth_android_client_not_registered">Bu build uchun Google kirishi ro‘yxatdan o‘tmagan. Ilovaning Android SHA kalitini Google Console/Firebase’ga qo‘shish kerak.</string>
+    <string name="error_google_auth_interrupted">Hisob tanlangandan keyin Google kirishi uzildi. Odatda bu buildning Android SHA kaliti hali Google Console/Firebase’ga qo‘shilmaganini bildiradi.</string>
     <string name="error_google_auth_unavailable">Serverda Google kirishi vaqtincha ishlamayapti. Keyinroq urinib ko‘ring.</string>
     <string name="error_google_auth_failed">Google orqali kirib bo‘lmadi. Qayta urinib ko‘ring.</string>
     <string name="error_google_email_not_verified">Davom etish uchun Google akkauntingizdagi email tasdiqlangan bo‘lishi kerak.</string>

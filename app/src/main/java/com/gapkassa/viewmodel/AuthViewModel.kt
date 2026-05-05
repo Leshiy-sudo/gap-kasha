@@ -128,6 +128,8 @@ class AuthViewModel(
 
     private fun mapProviderError(code: String): Int? = when (code) {
         "google_auth_not_configured" -> com.gapkassa.R.string.error_google_auth_not_configured
+        "google_auth_android_client_not_registered" -> com.gapkassa.R.string.error_google_auth_android_client_not_registered
+        "google_auth_interrupted" -> com.gapkassa.R.string.error_google_auth_interrupted
         "google_auth_invalid_response" -> com.gapkassa.R.string.error_google_auth_failed
         "google_auth_mock_disabled" -> com.gapkassa.R.string.error_google_auth_failed
         "google_auth_failed" -> com.gapkassa.R.string.error_google_auth_failed
