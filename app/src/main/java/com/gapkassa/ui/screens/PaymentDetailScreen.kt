@@ -15,14 +15,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import com.gapkassa.R
 import com.gapkassa.data.model.PaymentStatus
 import com.gapkassa.ui.components.AppTopBar
 import com.gapkassa.ui.components.BackIconButton
 import com.gapkassa.ui.components.DestructiveButton
 import com.gapkassa.ui.components.HomeIconButton
+import com.gapkassa.ui.components.PaymentStatusChip
 import com.gapkassa.ui.components.PrimaryButton
-import com.gapkassa.ui.components.StatusChip
 import com.gapkassa.ui.theme.FintechColors
 import com.gapkassa.ui.theme.FintechSpacing
 import com.gapkassa.viewmodel.RoomViewModel
@@ -68,16 +69,15 @@ fun PaymentDetailScreen(
         ) {
             Text(text = stringResource(R.string.label_payer, payerName), style = MaterialTheme.typography.bodyLarge)
             Text(text = stringResource(R.string.label_receiver, receiverName), style = MaterialTheme.typography.bodyLarge)
-            Text(text = stringResource(R.string.label_amount_value, payment.amount), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = stringResource(R.string.label_amount_value, payment.amount),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = FintechColors.PrimaryBlue
+            )
             Text(text = stringResource(R.string.label_date, payment.month.toString()), style = MaterialTheme.typography.bodyLarge)
 
-            val (textRes, bg, content) = when (payment.status) {
-                PaymentStatus.PAID -> Triple(R.string.status_paid, FintechColors.SuccessSoft, FintechColors.Success)
-                PaymentStatus.SKIPPED -> Triple(R.string.status_skipped, FintechColors.WarningSoft, FintechColors.Warning)
-                PaymentStatus.OVERDUE -> Triple(R.string.status_overdue, FintechColors.ErrorSoft, FintechColors.Error)
-                PaymentStatus.EXPECTED -> Triple(R.string.status_expected, FintechColors.InfoSoft, FintechColors.Info)
-            }
-            StatusChip(text = stringResource(textRes), background = bg, contentColor = content)
+            PaymentStatusChip(status = payment.status)
 
             if (canManage && payment.status != PaymentStatus.PAID) {
                 androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.md))

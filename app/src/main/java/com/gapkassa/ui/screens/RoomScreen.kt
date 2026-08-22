@@ -1,6 +1,6 @@
 package com.gapkassa.ui.screens
-import androidx.compose.foundation.layout.height
 
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,6 +10,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -20,18 +24,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import com.gapkassa.R
 import com.gapkassa.data.db.PaymentEntity
-import com.gapkassa.data.model.PaymentStatus
 import com.gapkassa.ui.components.AppCard
 import com.gapkassa.ui.components.AppNavButton
 import com.gapkassa.ui.components.AppTopBar
 import com.gapkassa.ui.components.BackIconButton
 import com.gapkassa.ui.components.HomeIconButton
+import com.gapkassa.ui.components.PaymentStatusChip
 import com.gapkassa.ui.components.StatusChip
 import com.gapkassa.ui.theme.FintechColors
 import com.gapkassa.ui.theme.FintechSpacing
-import com.gapkassa.viewmodel.MemberUi
 import com.gapkassa.viewmodel.RoomViewModel
 
 @Composable
@@ -70,17 +74,20 @@ fun RoomScreen(
                 StatusChip(
                     text = stringResource(R.string.label_amount_value, room.amount),
                     background = FintechColors.PrimaryBlueSoft,
-                    contentColor = FintechColors.PrimaryBlue
+                    contentColor = FintechColors.PrimaryBlue,
+                    icon = Icons.Default.AttachMoney
                 )
                 StatusChip(
                     text = stringResource(R.string.label_payment_day, room.paymentDay),
                     background = FintechColors.SurfaceSecondary,
-                    contentColor = FintechColors.TextSecondary
+                    contentColor = FintechColors.TextSecondary,
+                    icon = Icons.Default.CalendarToday
                 )
                 StatusChip(
                     text = stringResource(R.string.label_members_count, room.memberCount),
                     background = FintechColors.SurfaceSecondary,
-                    contentColor = FintechColors.TextSecondary
+                    contentColor = FintechColors.TextSecondary,
+                    icon = Icons.Default.Group
                 )
             }
 
@@ -161,21 +168,12 @@ private fun PaymentRow(
                 )
                 Text(
                     text = stringResource(R.string.label_amount_value, payment.amount),
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = FintechColors.PrimaryBlue
                 )
             }
-            paymentStatusChip(payment.status)
+            PaymentStatusChip(status = payment.status)
         }
     }
-}
-
-@Composable
-private fun paymentStatusChip(status: PaymentStatus) {
-    val (textRes, background, content) = when (status) {
-        PaymentStatus.PAID -> Triple(R.string.status_paid, FintechColors.SuccessSoft, FintechColors.Success)
-        PaymentStatus.SKIPPED -> Triple(R.string.status_skipped, FintechColors.WarningSoft, FintechColors.Warning)
-        PaymentStatus.OVERDUE -> Triple(R.string.status_overdue, FintechColors.ErrorSoft, FintechColors.Error)
-        PaymentStatus.EXPECTED -> Triple(R.string.status_expected, FintechColors.InfoSoft, FintechColors.Info)
-    }
-    StatusChip(text = stringResource(textRes), background = background, contentColor = content)
 }

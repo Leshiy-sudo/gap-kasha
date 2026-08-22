@@ -17,6 +17,8 @@
     <string name="section_contacts">Контакты</string>
     <string name="section_security">Безопасность</string>
     <string name="rooms_title">Комнаты</string>
+    <string name="empty_rooms_title">Пока нет комнат</string>
+    <string name="empty_rooms_body">Создайте первую комнату и пригласите соседей</string>
     <string name="create_room_title">Создание комнаты</string>
     <string name="section_main">Основное</string>
     <string name="section_finance">Финансовые параметры</string>

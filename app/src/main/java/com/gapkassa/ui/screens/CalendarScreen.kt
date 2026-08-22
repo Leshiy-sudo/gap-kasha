@@ -21,13 +21,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.gapkassa.R
-import com.gapkassa.data.model.PaymentStatus
 import com.gapkassa.ui.components.AppCard
 import com.gapkassa.ui.components.AppTopBar
 import com.gapkassa.ui.components.BackIconButton
 import com.gapkassa.ui.components.HomeIconButton
-import com.gapkassa.ui.components.StatusChip
-import com.gapkassa.ui.theme.FintechColors
+import com.gapkassa.ui.components.PaymentStatusChip
 import com.gapkassa.ui.theme.FintechSpacing
 import com.gapkassa.viewmodel.CalendarViewModel
 
@@ -87,13 +85,7 @@ fun CalendarScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     modifier = Modifier.weight(1f).padding(end = FintechSpacing.sm)
                                 )
-                                val (textRes, bg, content) = when (payment.status) {
-                                    PaymentStatus.PAID -> Triple(R.string.status_paid, FintechColors.SuccessSoft, FintechColors.Success)
-                                    PaymentStatus.SKIPPED -> Triple(R.string.status_skipped, FintechColors.WarningSoft, FintechColors.Warning)
-                                    PaymentStatus.OVERDUE -> Triple(R.string.status_overdue, FintechColors.ErrorSoft, FintechColors.Error)
-                                    PaymentStatus.EXPECTED -> Triple(R.string.status_expected, FintechColors.InfoSoft, FintechColors.Info)
-                                }
-                                StatusChip(text = stringResource(textRes), background = bg, contentColor = content)
+                                PaymentStatusChip(status = payment.status)
                             }
                         }
                     }

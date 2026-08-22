@@ -1,18 +1,24 @@
 package com.gapkassa.ui.screens
-import androidx.compose.foundation.layout.height
 
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
@@ -34,12 +40,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.gapkassa.R
 import com.gapkassa.data.repository.RoomDeleteError
 import com.gapkassa.ui.TestTags
 import com.gapkassa.ui.components.AdSlot
 import com.gapkassa.ui.components.AppCard
 import com.gapkassa.ui.components.AppTopBar
+import com.gapkassa.ui.theme.FintechColors
 import com.gapkassa.ui.theme.FintechSpacing
 import com.gapkassa.viewmodel.RoomItem
 import com.gapkassa.viewmodel.RoomsViewModel
@@ -81,17 +91,21 @@ fun RoomsScreen(
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             AdSlot(modifier = Modifier.fillMaxWidth())
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(FintechSpacing.lg),
-                verticalArrangement = Arrangement.spacedBy(FintechSpacing.md)
-            ) {
-                items(rooms, key = { it.id }) { room ->
-                    RoomRow(
-                        room = room,
-                        onClick = { onRoomClick(room.id) },
-                        onDeleteRequested = { pendingDelete = room }
-                    )
+            if (rooms.isEmpty()) {
+                EmptyRoomsState()
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(FintechSpacing.lg),
+                    verticalArrangement = Arrangement.spacedBy(FintechSpacing.md)
+                ) {
+                    items(rooms, key = { it.id }) { room ->
+                        RoomRow(
+                            room = room,
+                            onClick = { onRoomClick(room.id) },
+                            onDeleteRequested = { pendingDelete = room }
+                        )
+                    }
                 }
             }
         }
@@ -148,6 +162,37 @@ fun RoomsScreen(
 }
 
 @Composable
+private fun EmptyRoomsState() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(FintechSpacing.xxxl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Group,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(FintechSpacing.md))
+        Text(
+            text = stringResource(R.string.empty_rooms_title),
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(FintechSpacing.xs))
+        Text(
+            text = stringResource(R.string.empty_rooms_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
 private fun RoomRow(
     room: RoomItem,
     onClick: () -> Unit,
@@ -170,23 +215,31 @@ private fun RoomRow(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = room.name, style = MaterialTheme.typography.titleMedium)
-                androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.xs))
-                Text(
-                    text = stringResource(R.string.label_monthly_amount, room.amount),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(FintechSpacing.sm)) {
+                Spacer(Modifier.height(FintechSpacing.xs))
+                MetaRow(icon = Icons.Default.AttachMoney, tint = FintechColors.PrimaryBlue) {
                     Text(
-                        text = stringResource(R.string.label_payment_day, room.paymentDay),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = stringResource(R.string.label_monthly_amount, room.amount),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = FintechColors.PrimaryBlue
                     )
-                    Text(
-                        text = stringResource(R.string.label_members_count, room.memberCount),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                }
+                Spacer(Modifier.height(FintechSpacing.xs))
+                Row(horizontalArrangement = Arrangement.spacedBy(FintechSpacing.md)) {
+                    MetaRow(icon = Icons.Default.CalendarToday) {
+                        Text(
+                            text = room.paymentDay.toString(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    MetaRow(icon = Icons.Default.Group) {
+                        Text(
+                            text = room.memberCount.toString(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Text(
                         text = stringResource(R.string.label_cycle_months, room.cycleMonths),
                         style = MaterialTheme.typography.bodySmall,
@@ -213,5 +266,18 @@ private fun RoomRow(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MetaRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    content: @Composable () -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(4.dp))
+        content()
     }
 }

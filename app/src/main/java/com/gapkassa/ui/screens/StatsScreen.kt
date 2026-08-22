@@ -19,12 +19,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import com.gapkassa.R
 import com.gapkassa.ui.components.AppCard
 import com.gapkassa.ui.components.AppTopBar
 import com.gapkassa.ui.components.BackIconButton
 import com.gapkassa.ui.components.HomeIconButton
 import com.gapkassa.ui.components.SecondaryButton
+import com.gapkassa.ui.theme.FintechColors
 import com.gapkassa.ui.theme.FintechSpacing
 import com.gapkassa.viewmodel.StatsViewModel
 
@@ -106,7 +108,12 @@ private fun MetricCard(label: String, value: String, modifier: Modifier = Modifi
         Column(modifier = Modifier.padding(FintechSpacing.lg)) {
             Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.xs))
-            Text(text = value, style = MaterialTheme.typography.headlineSmall)
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = FintechColors.PrimaryBlue
+            )
         }
     }
 }
