@@ -14,12 +14,13 @@ import com.gapkassa.ui.theme.UiConfig
 fun AppTopBar(
     title: String,
     modifier: Modifier = Modifier,
+    titleModifier: Modifier = Modifier,
     navigationIcon: @Composable (() -> Unit) = {},
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     if (!UiConfig.useCleanFintechRedesign) {
         TopAppBar(
-            title = { androidx.compose.material3.Text(text = title) },
+            title = { androidx.compose.material3.Text(text = title, modifier = titleModifier) },
             navigationIcon = navigationIcon,
             actions = actions,
             modifier = modifier
@@ -30,6 +31,7 @@ fun AppTopBar(
         title = {
             androidx.compose.material3.Text(
                 text = title,
+                modifier = titleModifier,
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )

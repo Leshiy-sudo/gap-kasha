@@ -1,6 +1,7 @@
 package com.gapkassa.ui.components
 
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -23,7 +24,7 @@ fun AppNavButton(
     if (UiConfig.useCleanFintechRedesign) {
         Button(
             onClick = onClick,
-            modifier = modifier.height(48.dp),
+            modifier = modifier.heightIn(min = 48.dp),
             shape = androidx.compose.foundation.shape.RoundedCornerShape(FintechRadius.medium),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -32,7 +33,7 @@ fun AppNavButton(
         ) {
             Text(
                 text = text,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.labelMedium
