@@ -1,0 +1,179 @@
+/* Расчёт на слабый браузер Kindle: без flexbox/grid, крупный шрифт, высокий контраст */
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  color: #000;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px 20px 40px;
+}
+
+h1 {
+  font-size: 1.4em;
+  margin: 0 0 12px;
+}
+
+a {
+  color: #000;
+  text-decoration: underline;
+}
+
+.error {
+  color: #a00;
+  font-weight: bold;
+}
+
+/* --- Вход --- */
+
+.login-box {
+  max-width: 360px;
+  margin: 60px auto;
+  padding: 20px;
+  text-align: center;
+}
+
+.login-box input[type="password"] {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 1.3em;
+  padding: 10px;
+  margin: 12px 0;
+}
+
+.login-box button {
+  width: 100%;
+  font-size: 1.3em;
+  padding: 12px;
+}
+
+/* --- Топбар библиотеки --- */
+
+.topbar {
+  border-bottom: 2px solid #000;
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+}
+
+.button {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 2px solid #000;
+  border-radius: 6px;
+}
+
+.book-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.book-card {
+  border: 1px solid #000;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.book-name {
+  display: block;
+  font-size: 1.15em;
+  margin-bottom: 10px;
+}
+
+.book-meta {
+  font-size: 0.85em;
+}
+
+.progress {
+  display: inline-block;
+  color: #444;
+  border: 1px solid #999;
+  padding: 2px 8px;
+  margin-right: 8px;
+}
+
+.download {
+  display: inline-block;
+  border: 1px solid #000;
+  padding: 3px 10px;
+}
+
+/* --- Читалка --- */
+
+.nav {
+  border-bottom: 2px solid #000;
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+  font-size: 1.2em;
+}
+
+.nav-bottom {
+  border-bottom: none;
+  border-top: 2px solid #000;
+  padding-top: 12px;
+  margin-top: 24px;
+}
+
+.nav a {
+  display: inline-block;
+  padding: 8px 4px;
+}
+
+.nav-bottom a:first-child {
+  float: left;
+}
+
+.nav-bottom a:last-child {
+  float: right;
+}
+
+.page-indicator {
+  display: block;
+  text-align: center;
+}
+
+.book-title {
+  font-size: 1.1em;
+  color: #444;
+  margin: 0 0 20px;
+}
+
+.text {
+  line-height: 1.5;
+}
+
+.text.fs-1 { font-size: 0.85em; }
+.text.fs-2 { font-size: 0.95em; }
+.text.fs-3 { font-size: 1.05em; }
+.text.fs-4 { font-size: 1.2em; }
+.text.fs-5 { font-size: 1.4em; }
+
+.font-controls {
+  display: inline-block;
+}
+
+.font-controls a {
+  display: inline-block;
+  border: 1px solid #000;
+  padding: 3px 10px;
+  margin-left: 4px;
+  text-decoration: none;
+}
+
+.text p {
+  margin: 0 0 1em;
+  text-align: justify;
+}
+
+.text h3 {
+  font-size: 1.15em;
+  text-align: center;
+  margin: 1.2em 0 0.8em;
+}

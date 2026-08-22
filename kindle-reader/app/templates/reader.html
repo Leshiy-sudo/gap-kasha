@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if title %}{{ title }}{% else %}Читалка{% endif %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="page reader">
+    {% if error %}
+      <p class="error">Не удалось открыть книгу: {{ error }}</p>
+      <p><a href="/">← К списку книг</a></p>
+    {% else %}
+      <div class="nav">
+        <a href="/">← Список</a>
+        <span class="page-indicator">{{ page }} / {{ total }}</span>
+        <span class="font-controls">
+          {% if font_size > min_font_size %}
+            <a href="/read?path={{ path | urlencode }}&page={{ page }}&fs={{ font_size - 1 }}">A−</a>
+          {% endif %}
+          {% if font_size < max_font_size %}
+            <a href="/read?path={{ path | urlencode }}&page={{ page }}&fs={{ font_size + 1 }}">A+</a>
+          {% endif %}
+        </span>
+      </div>
+      <div class="nav">
+        <a class="download" href="/download?path={{ path | urlencode }}">Скачать</a>
+        <a class="download" href="/download?path={{ path | urlencode }}&fmt=mobi">Скачать (Kindle)</a>
+      </div>
+
+      <h2 class="book-title">{{ title }}</h2>
+
+      <div class="text fs-{{ font_size }}">
+        {% for paragraph, is_heading in paragraphs %}
+          {% if is_heading %}
+            <h3>{{ paragraph }}</h3>
+          {% elif paragraph %}
+            <p>{{ paragraph }}</p>
+          {% else %}
+            <br>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <div class="nav nav-bottom">
+        {% if page > 1 %}
+          <a href="/read?path={{ path | urlencode }}&page={{ page - 1 }}">← Назад</a>
+        {% else %}
+          <span></span>
+        {% endif %}
+        <span class="page-indicator">{{ page }} / {{ total }}</span>
+        {% if page < total %}
+          <a href="/read?path={{ path | urlencode }}&page={{ page + 1 }}">Вперёд →</a>
+        {% else %}
+          <span></span>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>
