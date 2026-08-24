@@ -117,7 +117,11 @@ fun ScheduleScreen(
                             modifier = Modifier.fillMaxWidth().padding(FintechSpacing.lg),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(text = month.toString(), style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = month.toString(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                             if (editing) {
                                 var menuOpen by remember { mutableStateOf(false) }
                                 Box {
@@ -137,7 +141,11 @@ fun ScheduleScreen(
                                     }
                                 }
                             } else {
-                                Text(text = memberName, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    text = memberName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                             }
                         }
                     }

@@ -1459,8 +1459,8 @@ def update_payment(payment_id: str, payload: PaymentStatusUpdate, request: Reque
         existing = conn.execute("SELECT * FROM payments WHERE id = ?", (payment_id,)).fetchone()
         if existing is None:
             raise HTTPException(status_code=404, detail="payment_not_found")
-        role = require_room_member(conn, existing["room_id"], current_user["id"])
-        if role != "ADMIN" and existing["payer_id"] != current_user["id"]:
+        require_room_member(conn, existing["room_id"], current_user["id"])
+        if existing["payer_id"] != current_user["id"]:
             raise HTTPException(status_code=403, detail="payment_update_forbidden")
         conn.execute(
             "UPDATE payments SET status = ?, updated_at = ? WHERE id = ?",

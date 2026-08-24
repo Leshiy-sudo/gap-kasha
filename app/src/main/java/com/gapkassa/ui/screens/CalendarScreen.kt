@@ -83,6 +83,7 @@ fun CalendarScreen(
                                     text = stringResource(R.string.label_payer, payer) + " → " +
                                         stringResource(R.string.label_receiver, receiver),
                                     style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.weight(1f).padding(end = FintechSpacing.sm)
                                 )
                                 PaymentStatusChip(status = payment.status)

@@ -214,7 +214,11 @@ private fun RoomRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = room.name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = room.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Spacer(Modifier.height(FintechSpacing.xs))
                 MetaRow(icon = Icons.Default.AttachMoney, tint = FintechColors.PrimaryBlue) {
                     Text(

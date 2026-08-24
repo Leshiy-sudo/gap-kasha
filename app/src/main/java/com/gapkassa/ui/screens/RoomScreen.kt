@@ -13,15 +13,22 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -29,6 +36,7 @@ import com.gapkassa.R
 import com.gapkassa.data.db.PaymentEntity
 import com.gapkassa.ui.components.AppCard
 import com.gapkassa.ui.components.AppNavButton
+import com.gapkassa.ui.components.AppOutlinedTextField
 import com.gapkassa.ui.components.AppTopBar
 import com.gapkassa.ui.components.BackIconButton
 import com.gapkassa.ui.components.HomeIconButton
@@ -54,13 +62,23 @@ fun RoomScreen(
     val members by viewModel.members.collectAsState()
     val payments by viewModel.payments.collectAsState()
     val memberNames = remember(members) { members.associate { it.userId to it.name } }
+    val isAdmin = remember(members, viewModel.currentUserId) { viewModel.isAdmin() }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var renameError by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
             AppTopBar(
                 title = room.roomName.ifBlank { stringResource(R.string.rooms_title) },
                 navigationIcon = { BackIconButton(onClick = onBack) },
-                actions = { HomeIconButton(onClick = onHome) }
+                actions = {
+                    if (isAdmin) {
+                        IconButton(onClick = { showRenameDialog = true }) {
+                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.action_rename_room))
+                        }
+                    }
+                    HomeIconButton(onClick = onHome)
+                }
             )
         }
     ) { padding ->
@@ -140,6 +158,54 @@ fun RoomScreen(
             }
         }
     }
+
+    if (showRenameDialog) {
+        var newName by remember { mutableStateOf(room.roomName) }
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text(stringResource(R.string.rename_room_title)) },
+            text = {
+                AppOutlinedTextField(
+                    value = newName,
+                    onValueChange = { newName = it },
+                    label = stringResource(R.string.field_room_name_new),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val trimmed = newName.trim()
+                    if (trimmed.isNotBlank()) {
+                        viewModel.renameRoom(
+                            name = trimmed,
+                            onSaved = { showRenameDialog = false },
+                            onError = { renameError = it.message }
+                        )
+                    }
+                }) {
+                    Text(stringResource(R.string.action_save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
+    renameError?.let { message ->
+        AlertDialog(
+            onDismissRequest = { renameError = null },
+            title = { Text(stringResource(R.string.delete_room_failed_title)) },
+            text = { Text(message.ifBlank { stringResource(R.string.rename_room_error) }) },
+            confirmButton = {
+                TextButton(onClick = { renameError = null }) {
+                    Text(stringResource(R.string.action_ok))
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -159,7 +225,8 @@ private fun PaymentRow(
             Column {
                 Text(
                     text = stringResource(R.string.label_payer, payerName),
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = stringResource(R.string.label_receiver, receiverName),

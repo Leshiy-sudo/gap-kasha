@@ -4,9 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gapkassa.BuildConfig
+import com.gapkassa.auth.TestIdentities
 import com.gapkassa.data.model.UserProfile
 import com.gapkassa.data.repository.AuthRepository
 import com.gapkassa.data.repository.ProfileRepository
+import com.gapkassa.data.repository.RoomRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -37,6 +39,7 @@ data class AuthUiState(
 class AuthViewModel(
     private val authRepository: AuthRepository,
     private val profileRepository: ProfileRepository,
+    private val roomRepository: RoomRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -99,6 +102,14 @@ class AuthViewModel(
                             photoUrl = user.photoUrl.orEmpty()
                         )
                     )
+                    if (user.email.equals(TestIdentities.CREATOR.email, ignoreCase = true)) {
+                        runCatching {
+                            roomRepository.ensureFixedTestRoom(
+                                creatorEmail = TestIdentities.CREATOR.email,
+                                memberEmails = TestIdentities.MEMBERS.map { it.email }
+                            )
+                        }
+                    }
                 }
                 runCatching { profileRepository.refreshProfile() }
                 updateState { it.copy(isLoading = false, errorResId = null, errorMessage = null) }

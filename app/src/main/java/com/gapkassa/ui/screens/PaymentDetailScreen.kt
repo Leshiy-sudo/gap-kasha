@@ -7,12 +7,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +43,7 @@ fun PaymentDetailScreen(
     val payments by viewModel.payments.collectAsState()
     val members by viewModel.members.collectAsState()
     val payment = payments.firstOrNull { it.id == paymentId }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -67,15 +73,27 @@ fun PaymentDetailScreen(
                 .padding(FintechSpacing.lg),
             verticalArrangement = Arrangement.spacedBy(FintechSpacing.md)
         ) {
-            Text(text = stringResource(R.string.label_payer, payerName), style = MaterialTheme.typography.bodyLarge)
-            Text(text = stringResource(R.string.label_receiver, receiverName), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = stringResource(R.string.label_payer, payerName),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = stringResource(R.string.label_receiver, receiverName),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
             Text(
                 text = stringResource(R.string.label_amount_value, payment.amount),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = FintechColors.PrimaryBlue
             )
-            Text(text = stringResource(R.string.label_date, payment.month.toString()), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = stringResource(R.string.label_date, payment.month.toString()),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
 
             PaymentStatusChip(status = payment.status)
 
@@ -85,14 +103,31 @@ fun PaymentDetailScreen(
                     PrimaryButton(
                         text = stringResource(R.string.action_paid),
                         fullWidth = false,
-                        onClick = { viewModel.markPaid(payment.id) }
+                        onClick = {
+                            viewModel.markPaid(payment.id) { errorMessage = it.message }
+                        }
                     )
                     DestructiveButton(
                         text = stringResource(R.string.action_skipped),
-                        onClick = { viewModel.markSkipped(payment.id) }
+                        onClick = {
+                            viewModel.markSkipped(payment.id) { errorMessage = it.message }
+                        }
                     )
                 }
             }
         }
+    }
+
+    errorMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { errorMessage = null },
+            title = { Text(stringResource(R.string.payment_update_failed_title)) },
+            text = { Text(message.ifBlank { stringResource(R.string.payment_update_failed_body) }) },
+            confirmButton = {
+                TextButton(onClick = { errorMessage = null }) {
+                    Text(stringResource(R.string.action_ok))
+                }
+            }
+        )
     }
 }

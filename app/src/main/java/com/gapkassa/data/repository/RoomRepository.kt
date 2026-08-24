@@ -15,6 +15,7 @@ import com.gapkassa.data.remote.PaymentStatusUpdateRequest
 import com.gapkassa.data.remote.RoomBundleDto
 import com.gapkassa.data.remote.RoomCreateRequest
 import com.gapkassa.data.remote.RoomDto
+import com.gapkassa.data.remote.RoomUpdateRequest
 import com.gapkassa.data.remote.ScheduleItemRequest
 import com.gapkassa.data.remote.ScheduleUpdateRequest
 import kotlinx.coroutines.flow.Flow
@@ -134,6 +135,28 @@ class RoomRepository(
         return response.room.id
     }
 
+    /**
+     * Creates the shared debug-only test room (1 creator + N members) on first use of
+     * the "test creator" quick-login button, so the 5 fixed test identities land in one
+     * room together with the right admin/member roles. No-op once the room exists.
+     */
+    suspend fun ensureFixedTestRoom(creatorEmail: String, memberEmails: List<String>) {
+        val api = backendApi ?: return
+        val existingRooms = api.rooms()
+        if (existingRooms.any { it.name == FIXED_TEST_ROOM_NAME }) return
+        val allEmails = listOf(creatorEmail) + memberEmails
+        createRoom(
+            name = FIXED_TEST_ROOM_NAME,
+            description = "Комната для тестового входа",
+            monthlyAmount = 100000,
+            paymentDay = 25,
+            cycleLength = 6,
+            autoRotate = true,
+            members = allEmails.map { email -> UserEntity(id = email, name = "", email = email) },
+            adminId = creatorEmail
+        )
+    }
+
     suspend fun seedDemoIfEmpty() {
         if (backendApi != null) return
         if (roomDao.count() > 0) return
@@ -164,6 +187,28 @@ class RoomRepository(
         }
         val updated = api.updatePaymentStatus(paymentId, PaymentStatusUpdateRequest(status.name))
         paymentDao.upsert(updated.toEntity())
+    }
+
+    suspend fun renameRoom(roomId: String, name: String) {
+        val api = backendApi
+        if (api == null) {
+            val existing = roomDao.getById(roomId) ?: return
+            roomDao.upsert(existing.copy(name = name))
+            return
+        }
+        val updated = api.updateRoom(
+            roomId,
+            RoomUpdateRequest(
+                name = name,
+                description = null,
+                monthlyAmount = null,
+                paymentDay = null,
+                cycleLengthMonths = null,
+                autoRotate = null,
+                memberCount = null
+            )
+        )
+        roomDao.upsert(updated.toEntity())
     }
 
     suspend fun updateSchedule(roomId: String, assignments: List<ScheduleAssignment>) {
@@ -209,7 +254,9 @@ class RoomRepository(
     }
 
     suspend fun clearLocalCache() {
-        database.clearAllTables()
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            database.clearAllTables()
+        }
     }
 
     fun generatePayments(
@@ -322,6 +369,8 @@ data class ScheduleAssignment(
     val month: LocalDate,
     val receiverId: String
 )
+
+private const val FIXED_TEST_ROOM_NAME = "Тестовая комната"
 
 enum class RoomDeleteError {
     PAID_EXISTS,

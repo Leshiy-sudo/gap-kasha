@@ -156,6 +156,12 @@
     <string name="schedule_admin_only_hint">Менять расписание может только ведущий.</string>
     <string name="schedule_error_invalid_receiver">Получатель должен быть участником комнаты.</string>
     <string name="schedule_error_save">Не удалось сохранить расписание. Проверьте доступ и попробуйте ещё раз.</string>
+    <string name="payment_update_failed_title">Не удалось обновить платёж</string>
+    <string name="payment_update_failed_body">Проверьте соединение и попробуйте ещё раз.</string>
+    <string name="action_rename_room">Переименовать</string>
+    <string name="rename_room_title">Переименовать комнату</string>
+    <string name="field_room_name_new">Новое название</string>
+    <string name="rename_room_error">Не удалось переименовать комнату.</string>
 
     <string name="verification_hint">Можно вставить ссылку из письма — приложение извлечёт код.</string>
     <string name="message_verification_sent">Письмо с кодом отправлено. Проверьте почту.</string>

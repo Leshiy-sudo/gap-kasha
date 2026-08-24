@@ -79,16 +79,16 @@ class GoogleAuthManager(context: Context) {
         )
     }
 
-    fun buildMockGoogleToken(): GoogleAuthToken {
+    fun buildMockGoogleToken(identity: TestIdentity): GoogleAuthToken {
         if (!isMockAvailable) {
             throw GoogleAuthException("google_auth_mock_disabled")
         }
         val payload = JSONObject(
             mapOf(
-                "email" to BuildConfig.GOOGLE_AUTH_MOCK_EMAIL,
-                "sub" to BuildConfig.GOOGLE_AUTH_MOCK_SUBJECT,
-                "name" to BuildConfig.GOOGLE_AUTH_MOCK_NAME,
-                "given_name" to BuildConfig.GOOGLE_AUTH_MOCK_NAME,
+                "email" to identity.email,
+                "sub" to identity.subject,
+                "name" to identity.displayName,
+                "given_name" to identity.displayName,
                 "family_name" to "",
                 "email_verified" to true,
             )

@@ -32,6 +32,7 @@ import com.gapkassa.ui.components.BackIconButton
 import com.gapkassa.ui.components.DestructiveButton
 import com.gapkassa.ui.components.HomeIconButton
 import com.gapkassa.ui.components.PrimaryButton
+import com.gapkassa.ui.components.SecondaryButton
 import com.gapkassa.ui.theme.FintechSpacing
 import com.gapkassa.viewmodel.ProfileViewModel
 
@@ -114,12 +115,13 @@ fun ProfileScreen(
             )
 
             androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.xxl))
-            TextButton(
-                onClick = { viewModel.logout(onLogout) },
-                modifier = Modifier.testTag(TestTags.ProfileLogout)
-            ) {
-                Text(stringResource(R.string.action_logout))
-            }
+            SecondaryButton(
+                text = stringResource(R.string.action_logout),
+                fullWidth = true,
+                modifier = Modifier.testTag(TestTags.ProfileLogout),
+                onClick = { viewModel.logout(onLogout) }
+            )
+            androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.sm))
             DestructiveButton(
                 text = stringResource(R.string.action_delete_account),
                 fullWidth = true,

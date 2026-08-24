@@ -24,7 +24,7 @@ class AppViewModelFactory(
     override fun <T : ViewModel> create(key: String, modelClass: Class<T>, handle: SavedStateHandle): T {
         return when {
             modelClass.isAssignableFrom(AuthViewModel::class.java) ->
-                AuthViewModel(app.authRepository, app.profileRepository, handle) as T
+                AuthViewModel(app.authRepository, app.profileRepository, app.roomRepository, handle) as T
             modelClass.isAssignableFrom(RoomsViewModel::class.java) ->
                 RoomsViewModel(app.roomRepository, app.actionLogRepository, app.authRepository) as T
             modelClass.isAssignableFrom(RoomViewModel::class.java) ->

@@ -77,9 +77,12 @@ class RoomViewModel(
 
     fun canManagePayment(payment: PaymentEntity?): Boolean {
         val userId = authRepository.currentUserId ?: return false
-        val isAdmin = members.value.firstOrNull { it.userId == userId }?.role == com.gapkassa.data.model.Role.ADMIN
-        val isPayer = payment?.payerId == userId
-        return isAdmin || isPayer
+        return payment?.payerId == userId
+    }
+
+    fun isAdmin(): Boolean {
+        val userId = authRepository.currentUserId ?: return false
+        return members.value.firstOrNull { it.userId == userId }?.role == com.gapkassa.data.model.Role.ADMIN
     }
 
     fun setRoom(roomId: String) {
@@ -89,20 +92,28 @@ class RoomViewModel(
         }
     }
 
-    fun markPaid(paymentId: String) {
+    fun markPaid(paymentId: String, onError: (Throwable) -> Unit = {}) {
         viewModelScope.launch {
-            roomRepository.updatePaymentStatus(paymentId, PaymentStatus.PAID)
-            authRepository.currentUserId?.let { userId ->
-                actionLogRepository.log(userId, currentRoomId.value, "mark_paid")
+            try {
+                roomRepository.updatePaymentStatus(paymentId, PaymentStatus.PAID)
+                authRepository.currentUserId?.let { userId ->
+                    actionLogRepository.log(userId, currentRoomId.value, "mark_paid")
+                }
+            } catch (exception: Throwable) {
+                onError(exception)
             }
         }
     }
 
-    fun markSkipped(paymentId: String) {
+    fun markSkipped(paymentId: String, onError: (Throwable) -> Unit = {}) {
         viewModelScope.launch {
-            roomRepository.updatePaymentStatus(paymentId, PaymentStatus.SKIPPED)
-            authRepository.currentUserId?.let { userId ->
-                actionLogRepository.log(userId, currentRoomId.value, "mark_skipped")
+            try {
+                roomRepository.updatePaymentStatus(paymentId, PaymentStatus.SKIPPED)
+                authRepository.currentUserId?.let { userId ->
+                    actionLogRepository.log(userId, currentRoomId.value, "mark_skipped")
+                }
+            } catch (exception: Throwable) {
+                onError(exception)
             }
         }
     }
@@ -116,6 +127,22 @@ class RoomViewModel(
         viewModelScope.launch {
             try {
                 roomRepository.updateSchedule(roomId, assignments)
+                onSaved()
+            } catch (exception: Throwable) {
+                onError(exception)
+            }
+        }
+    }
+
+    fun renameRoom(
+        name: String,
+        onSaved: () -> Unit,
+        onError: (Throwable) -> Unit
+    ) {
+        val roomId = currentRoomId.value ?: return
+        viewModelScope.launch {
+            try {
+                roomRepository.renameRoom(roomId, name)
                 onSaved()
             } catch (exception: Throwable) {
                 onError(exception)

@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.gapkassa.R
 import com.gapkassa.auth.GoogleAuthException
 import com.gapkassa.auth.GoogleAuthManager
+import com.gapkassa.auth.TestIdentities
 import com.gapkassa.auth.findActivity
 import com.gapkassa.ui.TestTags
 import com.gapkassa.ui.components.AppCard
@@ -83,7 +84,8 @@ fun AuthScreen(
             Column(modifier = Modifier.padding(FintechSpacing.lg)) {
                 Text(
                     text = stringResource(R.string.auth_google_card_title),
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.xs))
                 Text(
@@ -137,19 +139,25 @@ fun AuthScreen(
 
         if (state.isMockGoogleAvailable) {
             androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.md))
-            TertiaryButton(
-                text = stringResource(R.string.action_continue_with_test_google),
-                enabled = !state.isLoading,
-                modifier = Modifier.testTag(TestTags.AuthMockGoogleButton),
-                onClick = {
-                    try {
-                        val token = authManager.buildMockGoogleToken()
-                        viewModel.loginWithGoogle(token.idToken, token.nonce, onLoggedIn)
-                    } catch (error: GoogleAuthException) {
-                        handleFailure(error)
-                    }
+            TestIdentities.ALL.forEachIndexed { index, identity ->
+                if (index > 0) {
+                    androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.xs))
                 }
-            )
+                val tag = if (index == 0) TestTags.AuthMockGoogleButton else "${TestTags.AuthMockGoogleButton}_$index"
+                TertiaryButton(
+                    text = identity.displayName,
+                    enabled = !state.isLoading,
+                    modifier = Modifier.testTag(tag),
+                    onClick = {
+                        try {
+                            val token = authManager.buildMockGoogleToken(identity)
+                            viewModel.loginWithGoogle(token.idToken, token.nonce, onLoggedIn)
+                        } catch (error: GoogleAuthException) {
+                            handleFailure(error)
+                        }
+                    }
+                )
+            }
             androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.sm))
             Text(
                 text = stringResource(R.string.auth_google_mock_hint),
