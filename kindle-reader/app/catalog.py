@@ -356,8 +356,18 @@ class TelegramCatalog:
                     )
 
             text = (message.raw_text or "").strip()
-            actions.extend(self._command_actions(text))
-            if text or actions or document_name:
+            command_entries = self._command_entries(text)
+            if command_entries:
+                entries.extend(command_entries)
+                if actions or document_name:
+                    entries.append(
+                        CatalogEntry(
+                            text="",
+                            actions=actions,
+                            document_name=document_name,
+                        )
+                    )
+            elif text or actions or document_name:
                 entries.append(
                     CatalogEntry(
                         text=text,
@@ -373,15 +383,16 @@ class TelegramCatalog:
             unsupported_names=unsupported_names,
         )
 
-    def _command_actions(self, text: str) -> list[CatalogAction]:
-        """Превращает команды из текста бота в понятные кнопки выбора."""
-        actions: list[CatalogAction] = []
+    def _command_entries(self, text: str) -> list[CatalogEntry]:
+        """Ставит кнопку команды сразу под описанием соответствующей книги."""
+        entries: list[CatalogEntry] = []
         block_lines: list[str] = []
         seen: set[str] = set()
 
         for raw_line in text.splitlines():
             line = raw_line.strip()
             commands = re.findall(r"(?<![\w/])/[A-Za-z][A-Za-z0-9_]{0,63}", line)
+            command_actions: list[CatalogAction] = []
             for command in commands:
                 if command in seen:
                     continue
@@ -401,16 +412,27 @@ class TelegramCatalog:
                     label = f"{format_name.upper()} — добавить в библиотеку"
                 else:
                     label = f"Выбрать: {title}" if title != command else command
-                actions.append(
+                command_actions.append(
                     CatalogAction(
                         label=label[:100],
                         token=self._actions.encode_command(command),
                     )
                 )
+            if command_actions:
+                entries.append(
+                    CatalogEntry(
+                        text="\n".join(block_lines).strip(),
+                        actions=command_actions,
+                    )
+                )
                 block_lines = []
-            if not commands:
+            elif not commands:
                 block_lines.append(line)
-        return actions
+
+        trailing_text = "\n".join(block_lines).strip()
+        if entries and trailing_text:
+            entries.append(CatalogEntry(text=trailing_text))
+        return entries
 
 
 telegram_catalog = TelegramCatalog()

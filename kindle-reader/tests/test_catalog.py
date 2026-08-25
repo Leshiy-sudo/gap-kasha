@@ -117,16 +117,62 @@ class CatalogOutcomeTests(unittest.IsolatedAsyncioTestCase):
             FakeClient(), [message], import_documents=False
         )
 
+        self.assertEqual(len(outcome.entries), 2)
         self.assertEqual(
-            [action.label for action in outcome.entries[0].actions],
+            outcome.entries[0].text,
+            "Найдено: 2 книги\n\nВойна и мир. Том 1 - ru\nЛев Толстой",
+        )
+        self.assertEqual(
+            [action.label for entry in outcome.entries for action in entry.actions],
             [
                 "Выбрать: Война и мир. Том 1 - ru",
                 "Выбрать: Война и мир. Том 2 - ru",
             ],
         )
         self.assertEqual(
+            outcome.entries[1].text,
+            "Война и мир. Том 2 - ru\nЛев Толстой",
+        )
+        self.assertEqual(len(outcome.entries[0].actions), 1)
+        self.assertEqual(len(outcome.entries[1].actions), 1)
+        self.assertEqual(
             service._actions.decode(outcome.entries[0].actions[0].token),
             catalog.ActionTarget(kind="command", command="/download175105"),
+        )
+
+    async def test_places_navigation_buttons_after_book_entries(self):
+        service = catalog.TelegramCatalog()
+        message = FakeMessage(
+            80,
+            text=(
+                "Книга первая\n"
+                "Автор первый\n"
+                "Скачать книгу: /download100\n\n"
+                "Книга вторая\n"
+                "Автор второй\n"
+                "Скачать книгу: /download200"
+            ),
+            buttons=[[FakeButton("1"), FakeButton("2")]],
+        )
+
+        outcome = await service._build_outcome(
+            FakeClient(), [message], import_documents=False
+        )
+
+        self.assertEqual(len(outcome.entries), 3)
+        self.assertEqual(outcome.entries[0].text, "Книга первая\nАвтор первый")
+        self.assertEqual(
+            [action.label for action in outcome.entries[0].actions],
+            ["Выбрать: Книга первая"],
+        )
+        self.assertEqual(outcome.entries[1].text, "Книга вторая\nАвтор второй")
+        self.assertEqual(
+            [action.label for action in outcome.entries[1].actions],
+            ["Выбрать: Книга вторая"],
+        )
+        self.assertEqual(outcome.entries[2].text, "")
+        self.assertEqual(
+            [action.label for action in outcome.entries[2].actions], ["1", "2"]
         )
 
     async def test_hides_unsupported_text_format_commands(self):
@@ -141,7 +187,7 @@ class CatalogOutcomeTests(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(
-            [action.label for action in outcome.entries[0].actions],
+            [action.label for entry in outcome.entries for action in entry.actions],
             ["FB2 — добавить в библиотеку"],
         )
         self.assertEqual(
