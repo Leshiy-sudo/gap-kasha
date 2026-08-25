@@ -74,8 +74,8 @@ class TelegramClient:
         url = f"https://api.telegram.org/bot{self._token}/{method}"
         try:
             response = await self._http.post(url, json=payload)
-        except httpx.HTTPError as exc:
-            raise TelegramBotError(f"Telegram API недоступен ({method})") from exc
+        except httpx.HTTPError:
+            raise TelegramBotError(f"Telegram API недоступен ({method})") from None
 
         try:
             body = response.json()
@@ -112,8 +112,8 @@ class TelegramClient:
         try:
             response = await self._http.get(url)
             response.raise_for_status()
-        except httpx.HTTPError as exc:
-            raise TelegramBotError("Не удалось скачать документ из Telegram") from exc
+        except httpx.HTTPError:
+            raise TelegramBotError("Не удалось скачать документ из Telegram") from None
         return response.content
 
 
@@ -242,6 +242,8 @@ def main() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
     asyncio.run(run_bot())
 
 
