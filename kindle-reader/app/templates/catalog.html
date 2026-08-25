@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if job and job.status == 'working' %}<meta http-equiv="refresh" content="3">{% endif %}
   <title>Поиск книг</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -15,7 +16,14 @@
 
     <p class="catalog-help">Найдите книгу, выберите нужный вариант, затем нажмите «FB2 — добавить в библиотеку». После загрузки откройте библиотеку.</p>
 
-    {% if configuration_error %}
+    {% if job and job.status == 'working' %}
+      <div class="catalog-working">
+        <p><strong>{{ job.progress_message }}</strong></p>
+        {% if job.query %}<p>Запрос: {{ job.query }}</p>{% endif %}
+        <p>Можно обновлять страницу — операция не потеряется.</p>
+        <p><a class="button" href="/catalog?job={{ job.id | urlencode }}">Обновить статус</a></p>
+      </div>
+    {% elif configuration_error %}
       <p class="error">{{ configuration_error }}. Поиск станет доступен после подключения отдельного аккаунта.</p>
     {% else %}
       <form class="search-form" method="post" action="/catalog/search">
@@ -29,7 +37,7 @@
       <p class="error">{{ error }}</p>
     {% endif %}
 
-    {% if outcome %}
+    {% if outcome and (not job or job.status != 'working') %}
       {% if outcome.imported_names %}
         <div class="success">
           <p>Книга добавлена в библиотеку:</p>

@@ -59,6 +59,11 @@ _local_books_value = os.environ.get("LOCAL_BOOKS_PATH", "data/imported_books")
 LOCAL_BOOKS_PATH = Path(_local_books_value)
 if not LOCAL_BOOKS_PATH.is_absolute():
     LOCAL_BOOKS_PATH = PROJECT_DIR / LOCAL_BOOKS_PATH
+_catalog_jobs_value = os.environ.get("CATALOG_JOBS_PATH", "data/catalog_jobs")
+CATALOG_JOBS_PATH = Path(_catalog_jobs_value)
+if not CATALOG_JOBS_PATH.is_absolute():
+    CATALOG_JOBS_PATH = PROJECT_DIR / CATALOG_JOBS_PATH
+CATALOG_JOB_TTL_SECONDS = int(os.environ.get("CATALOG_JOB_TTL_SECONDS", "86400"))
 
 # Ставь false только для локальной разработки по http://127.0.0.1 —
 # на проде за HTTPS должно быть true, иначе браузер cookie не примет.

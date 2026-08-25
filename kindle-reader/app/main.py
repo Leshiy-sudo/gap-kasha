@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from urllib.parse import quote
 
 from fastapi import FastAPI, Form, Request
@@ -5,7 +7,16 @@ from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import auth, books, catalog, config, convert, local_library, progress
+from . import (
+    auth,
+    books,
+    catalog,
+    catalog_jobs,
+    config,
+    convert,
+    local_library,
+    progress,
+)
 from .yandex_disk import YandexDiskError
 
 _MIME_TYPES = {
@@ -22,6 +33,8 @@ MAX_FONT_SIZE = 5
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
+logger = logging.getLogger("kindle_reader.web")
+_background_tasks: set[asyncio.Task] = set()
 
 
 def _safe_next(path: str) -> str:
@@ -104,22 +117,56 @@ def _catalog_context(
     query: str = "",
     outcome: catalog.CatalogOutcome | None = None,
     error: str | None = None,
+    job: catalog_jobs.CatalogJob | None = None,
 ) -> dict:
     return {
         "query": query,
         "outcome": outcome,
         "error": error,
+        "job": job,
         "configuration_error": catalog.telegram_catalog.configuration_error(),
     }
 
 
 @app.get("/catalog")
-async def catalog_page(request: Request):
+async def catalog_page(request: Request, job: str | None = None):
     if redirect := _require_auth(request):
         return redirect
+    current_job = catalog_jobs.catalog_jobs.get(job) if job else None
+    error = None
+    if job and current_job is None:
+        error = "Ход операции не найден. Повторите поиск."
     return templates.TemplateResponse(
-        request, "catalog.html", _catalog_context()
+        request,
+        "catalog.html",
+        _catalog_context(
+            query=current_job.query if current_job else "",
+            outcome=current_job.outcome if current_job else None,
+            error=current_job.error if current_job else error,
+            job=current_job,
+        ),
     )
+
+
+def _start_catalog_task(coroutine) -> None:
+    task = asyncio.create_task(coroutine)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
+
+async def _run_catalog_job(job_id: str, operation) -> None:
+    try:
+        outcome = await operation()
+        if outcome.imported_names:
+            books.invalidate_list_cache()
+        catalog_jobs.catalog_jobs.finish(job_id, outcome=outcome)
+    except catalog.CatalogError as exc:
+        catalog_jobs.catalog_jobs.finish(job_id, error=str(exc))
+    except Exception:
+        logger.exception("Unexpected catalog background failure")
+        catalog_jobs.catalog_jobs.finish(
+            job_id, error="Не удалось завершить операцию каталога"
+        )
 
 
 @app.post("/catalog/search")
@@ -127,20 +174,11 @@ async def catalog_search(request: Request, query: str = Form(...)):
     if redirect := _require_auth(request):
         return redirect
 
-    outcome = None
-    error = None
-    try:
-        outcome = await catalog.telegram_catalog.search(query)
-        if outcome.imported_names:
-            books.invalidate_list_cache()
-    except catalog.CatalogError as exc:
-        error = str(exc)
-
-    return templates.TemplateResponse(
-        request,
-        "catalog.html",
-        _catalog_context(query=query, outcome=outcome, error=error),
+    job = catalog_jobs.catalog_jobs.create("search", query=query)
+    _start_catalog_task(
+        _run_catalog_job(job.id, lambda: catalog.telegram_catalog.search(query))
     )
+    return RedirectResponse(f"/catalog?job={quote(job.id)}", status_code=303)
 
 
 @app.post("/catalog/action")
@@ -148,20 +186,11 @@ async def catalog_action(request: Request, token: str = Form(...)):
     if redirect := _require_auth(request):
         return redirect
 
-    outcome = None
-    error = None
-    try:
-        outcome = await catalog.telegram_catalog.activate(token)
-        if outcome.imported_names:
-            books.invalidate_list_cache()
-    except catalog.CatalogError as exc:
-        error = str(exc)
-
-    return templates.TemplateResponse(
-        request,
-        "catalog.html",
-        _catalog_context(outcome=outcome, error=error),
+    job = catalog_jobs.catalog_jobs.create("action")
+    _start_catalog_task(
+        _run_catalog_job(job.id, lambda: catalog.telegram_catalog.activate(token))
     )
+    return RedirectResponse(f"/catalog?job={quote(job.id)}", status_code=303)
 
 
 @app.get("/download")

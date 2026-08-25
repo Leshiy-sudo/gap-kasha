@@ -114,7 +114,8 @@ a {
 
 .catalog-entry,
 .success,
-.notice {
+.notice,
+.catalog-working {
   border: 1px solid #000;
   border-radius: 8px;
   padding: 12px 14px;
@@ -123,6 +124,11 @@ a {
 
 .success {
   border-width: 3px;
+}
+
+.catalog-working {
+  border-width: 3px;
+  text-align: center;
 }
 
 .catalog-text {
