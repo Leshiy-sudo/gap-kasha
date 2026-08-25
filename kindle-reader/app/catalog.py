@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -55,30 +56,62 @@ class CatalogOutcome:
     unsupported_names: list[str] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class ActionTarget:
+    kind: str
+    message_id: int = 0
+    row: int = 0
+    column: int = 0
+    command: str = ""
+
+
 class ActionCodec:
     def __init__(self, secret_key: str):
         self._serializer = URLSafeTimedSerializer(
             secret_key, salt="kindle-reader-catalog-action"
         )
 
-    def encode(self, message_id: int, row: int, column: int) -> str:
+    def encode_button(self, message_id: int, row: int, column: int) -> str:
         return self._serializer.dumps(
-            {"message_id": message_id, "row": row, "column": column}
+            {
+                "kind": "button",
+                "message_id": message_id,
+                "row": row,
+                "column": column,
+            }
         )
 
-    def decode(self, token: str) -> tuple[int, int, int]:
+    def encode_command(self, command: str) -> str:
+        return self._serializer.dumps({"kind": "command", "command": command})
+
+    def decode(self, token: str) -> ActionTarget:
         try:
             payload = self._serializer.loads(
                 token, max_age=config.TELEGRAM_ACTION_MAX_AGE_SECONDS
             )
-            message_id = int(payload["message_id"])
-            row = int(payload["row"])
-            column = int(payload["column"])
         except (BadSignature, SignatureExpired, KeyError, TypeError, ValueError) as exc:
             raise CatalogError("Действие устарело. Повторите поиск.") from exc
-        if message_id <= 0 or row < 0 or column < 0:
-            raise CatalogError("Некорректное действие каталога")
-        return message_id, row, column
+
+        try:
+            kind = str(payload["kind"])
+            if kind == "button":
+                target = ActionTarget(
+                    kind=kind,
+                    message_id=int(payload["message_id"]),
+                    row=int(payload["row"]),
+                    column=int(payload["column"]),
+                )
+                if target.message_id <= 0 or target.row < 0 or target.column < 0:
+                    raise ValueError
+                return target
+            if kind == "command":
+                command = str(payload["command"])
+                if not re.fullmatch(r"/[A-Za-z][A-Za-z0-9_]{0,63}", command):
+                    raise ValueError
+                return ActionTarget(kind=kind, command=command)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise CatalogError("Некорректное действие каталога") from exc
+        raise CatalogError("Некорректное действие каталога")
 
 
 class TelegramCatalog:
@@ -126,10 +159,17 @@ class TelegramCatalog:
             return await self._with_client(self._search, query)
 
     async def activate(self, token: str) -> CatalogOutcome:
-        message_id, row, column = self._actions.decode(token)
+        target = self._actions.decode(token)
         async with self._lock:
+            if target.kind == "command":
+                return await self._with_client(
+                    self._send_command, target.command
+                )
             return await self._with_client(
-                self._activate, message_id, row, column
+                self._activate_button,
+                target.message_id,
+                target.row,
+                target.column,
             )
 
     async def _with_client(self, operation: Any, *args: Any) -> CatalogOutcome:
@@ -162,7 +202,14 @@ class TelegramCatalog:
         messages = await self._wait_for_changes(client, source, after_id=sent.id)
         return await self._build_outcome(client, messages, import_documents=True)
 
-    async def _activate(
+    async def _send_command(
+        self, client: TelegramClient, source: Any, command: str
+    ) -> CatalogOutcome:
+        sent = await client.send_message(source, command)
+        messages = await self._wait_for_changes(client, source, after_id=sent.id)
+        return await self._build_outcome(client, messages, import_documents=True)
+
+    async def _activate_button(
         self,
         client: TelegramClient,
         source: Any,
@@ -286,13 +333,14 @@ class TelegramCatalog:
                     actions.append(
                         CatalogAction(
                             label=label[:100],
-                            token=self._actions.encode(
+                            token=self._actions.encode_button(
                                 message.id, row_index, column_index
                             ),
                         )
                     )
 
             text = (message.raw_text or "").strip()
+            actions.extend(self._command_actions(text))
             if text or actions or document_name:
                 entries.append(
                     CatalogEntry(
@@ -308,6 +356,39 @@ class TelegramCatalog:
             existing_names=existing_names,
             unsupported_names=unsupported_names,
         )
+
+    def _command_actions(self, text: str) -> list[CatalogAction]:
+        """Превращает команды из текста бота в понятные кнопки выбора."""
+        actions: list[CatalogAction] = []
+        block_lines: list[str] = []
+        seen: set[str] = set()
+
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            commands = re.findall(r"(?<![\w/])/[A-Za-z][A-Za-z0-9_]{0,63}", line)
+            for command in commands:
+                if command in seen:
+                    continue
+                seen.add(command)
+                title = next(
+                    (
+                        candidate
+                        for candidate in block_lines
+                        if candidate and not candidate.lower().startswith("найдено:")
+                    ),
+                    command,
+                )
+                label = f"Выбрать: {title}" if title != command else command
+                actions.append(
+                    CatalogAction(
+                        label=label[:100],
+                        token=self._actions.encode_command(command),
+                    )
+                )
+                block_lines = []
+            if not commands:
+                block_lines.append(line)
+        return actions
 
 
 telegram_catalog = TelegramCatalog()

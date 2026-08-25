@@ -49,11 +49,21 @@ class FakeClient:
 class ActionCodecTests(unittest.TestCase):
     def test_round_trip(self):
         codec = catalog.ActionCodec("secret")
-        self.assertEqual(codec.decode(codec.encode(123, 2, 1)), (123, 2, 1))
+        self.assertEqual(
+            codec.decode(codec.encode_button(123, 2, 1)),
+            catalog.ActionTarget(kind="button", message_id=123, row=2, column=1),
+        )
+
+    def test_command_round_trip(self):
+        codec = catalog.ActionCodec("secret")
+        self.assertEqual(
+            codec.decode(codec.encode_command("/download175105")),
+            catalog.ActionTarget(kind="command", command="/download175105"),
+        )
 
     def test_rejects_tampered_token(self):
         codec = catalog.ActionCodec("secret")
-        token = codec.encode(123, 2, 1)
+        token = codec.encode_button(123, 2, 1)
         with self.assertRaisesRegex(catalog.CatalogError, "устарело"):
             codec.decode(token + "x")
 
@@ -77,7 +87,38 @@ class CatalogOutcomeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([item.label for item in outcome.entries[0].actions], ["FB2"])
         self.assertEqual(
             service._actions.decode(outcome.entries[0].actions[0].token),
-            (77, 0, 0),
+            catalog.ActionTarget(kind="button", message_id=77, row=0, column=0),
+        )
+
+    async def test_exposes_text_download_commands_as_book_actions(self):
+        service = catalog.TelegramCatalog()
+        message = FakeMessage(
+            78,
+            text=(
+                "Найдено: 2 книги\n\n"
+                "Война и мир. Том 1 - ru\n"
+                "Лев Толстой\n"
+                "Скачать книгу: /download175105\n\n"
+                "Война и мир. Том 2 - ru\n"
+                "Лев Толстой\n"
+                "Скачать книгу: /download175143"
+            ),
+        )
+
+        outcome = await service._build_outcome(
+            FakeClient(), [message], import_documents=False
+        )
+
+        self.assertEqual(
+            [action.label for action in outcome.entries[0].actions],
+            [
+                "Выбрать: Война и мир. Том 1 - ru",
+                "Выбрать: Война и мир. Том 2 - ru",
+            ],
+        )
+        self.assertEqual(
+            service._actions.decode(outcome.entries[0].actions[0].token),
+            catalog.ActionTarget(kind="command", command="/download175105"),
         )
 
     async def test_downloads_and_uploads_supported_document(self):
