@@ -40,6 +40,37 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 `.txt`, `.fb2`, `.fb2.zip`. EPUB и PDF пока не поддерживаются.
 
+## Импорт через Telegram
+
+Telegram-мост принимает книгу, которую пользователь переслал из книжного бота,
+и загружает её в ту же папку `YANDEX_BOOKS_PATH`. Прямое управление чужим
+ботом не требуется.
+
+1. Создай собственного бота через `@BotFather`.
+2. Добавь в `.env`:
+   ```dotenv
+   TELEGRAM_BOT_TOKEN=токен-от-BotFather
+   TELEGRAM_ALLOWED_USER_IDS=123456789
+   KINDLE_READER_PUBLIC_URL=https://kindlereader.duckdns.org/
+   ```
+   `TELEGRAM_ALLOWED_USER_IDS` — числовые ID пользователей через запятую.
+3. Локальный запуск:
+   ```bash
+   python -m app.telegram_bot
+   ```
+4. На VPS установи `deploy/kindle-telegram-bot.service` в
+   `/etc/systemd/system/`, перечитай конфигурацию systemd и включи службу.
+
+После этого перешли боту документ FB2, FB2.ZIP или TXT. Бот принимает файлы
+только от разрешённых ID, не перезаписывает существующие книги и сохраняет
+позицию Telegram long polling в `data/telegram_offset.txt`.
+
+Проверка тестов:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
 ## Известные упрощения (сделано осознанно, для минимального объёма)
 
 - Список книг и разобранные страницы кэшируются только в памяти процесса — перезапуск сервера сбрасывает кэш (это нормально, файлы просто перечитаются с Диска).

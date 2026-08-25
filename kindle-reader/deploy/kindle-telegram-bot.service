@@ -1,0 +1,22 @@
+[Unit]
+Description=Kindle Reader Telegram Importer
+Wants=network-online.target
+After=network-online.target kindle-reader.service
+
+[Service]
+Type=simple
+User=kindlereader
+Group=kindlereader
+WorkingDirectory=/opt/kindle-reader
+EnvironmentFile=/opt/kindle-reader/.env
+ExecStart=/opt/kindle-reader/.venv/bin/python -m app.telegram_bot
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/kindle-reader/data
+
+[Install]
+WantedBy=multi-user.target
