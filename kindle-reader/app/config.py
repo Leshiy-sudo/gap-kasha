@@ -3,7 +3,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+PROJECT_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(PROJECT_DIR / ".env")
 
 YANDEX_TOKEN = os.environ["YANDEX_TOKEN"]
 YANDEX_BOOKS_PATH = os.environ.get("YANDEX_BOOKS_PATH", "/Книги")
@@ -35,6 +36,25 @@ TELEGRAM_POLL_TIMEOUT_SECONDS = int(
 KINDLE_READER_PUBLIC_URL = os.environ.get(
     "KINDLE_READER_PUBLIC_URL", "https://kindlereader.duckdns.org/"
 ).rstrip("/")
+
+_telegram_api_id_value = os.environ.get("TELEGRAM_API_ID", "").strip()
+TELEGRAM_API_ID = int(_telegram_api_id_value) if _telegram_api_id_value else 0
+TELEGRAM_API_HASH = os.environ.get("TELEGRAM_API_HASH", "").strip()
+_telegram_session_value = os.environ.get(
+    "TELEGRAM_SESSION_PATH", "data/telegram_catalog"
+)
+TELEGRAM_SESSION_PATH = Path(_telegram_session_value)
+if not TELEGRAM_SESSION_PATH.is_absolute():
+    TELEGRAM_SESSION_PATH = PROJECT_DIR / TELEGRAM_SESSION_PATH
+TELEGRAM_SOURCE_BOT = os.environ.get(
+    "TELEGRAM_SOURCE_BOT", "flibustafreebookbot"
+).strip().lstrip("@")
+TELEGRAM_CATALOG_TIMEOUT_SECONDS = int(
+    os.environ.get("TELEGRAM_CATALOG_TIMEOUT_SECONDS", "25")
+)
+TELEGRAM_ACTION_MAX_AGE_SECONDS = int(
+    os.environ.get("TELEGRAM_ACTION_MAX_AGE_SECONDS", "600")
+)
 
 # Ставь false только для локальной разработки по http://127.0.0.1 —
 # на проде за HTTPS должно быть true, иначе браузер cookie не примет.

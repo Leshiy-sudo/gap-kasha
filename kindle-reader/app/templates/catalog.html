@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Поиск книг</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <h1>Поиск книг</h1>
+      <a class="button" href="/">Моя библиотека</a>
+    </div>
+
+    {% if configuration_error %}
+      <p class="error">{{ configuration_error }}. Поиск станет доступен после подключения отдельного аккаунта.</p>
+    {% else %}
+      <form class="search-form" method="post" action="/catalog/search">
+        <label for="query">Название книги или автор</label>
+        <input id="query" name="query" type="text" value="{{ query }}" maxlength="120" required autofocus>
+        <button type="submit">Искать</button>
+      </form>
+    {% endif %}
+
+    {% if error %}
+      <p class="error">{{ error }}</p>
+    {% endif %}
+
+    {% if outcome %}
+      {% if outcome.imported_names %}
+        <div class="success">
+          <p>Книга добавлена в библиотеку:</p>
+          <ul>
+            {% for name in outcome.imported_names %}<li>{{ name }}</li>{% endfor %}
+          </ul>
+          <p><a class="button primary" href="/">Открыть библиотеку</a></p>
+        </div>
+      {% endif %}
+
+      {% if outcome.existing_names %}
+        <div class="notice">
+          <p>Эта книга уже есть в библиотеке:</p>
+          <ul>
+            {% for name in outcome.existing_names %}<li>{{ name }}</li>{% endfor %}
+          </ul>
+          <p><a class="button" href="/">Открыть библиотеку</a></p>
+        </div>
+      {% endif %}
+
+      {% if outcome.unsupported_names %}
+        <p class="error">Каталог прислал неподдерживаемый файл: {{ outcome.unsupported_names | join(', ') }}</p>
+      {% endif %}
+
+      <div class="catalog-results">
+        {% for entry in outcome.entries %}
+          <div class="catalog-entry">
+            {% if entry.text %}<p class="catalog-text">{{ entry.text }}</p>{% endif %}
+            {% if entry.document_name %}<p class="file-name">Файл: {{ entry.document_name }}</p>{% endif %}
+            {% for action in entry.actions %}
+              <form class="catalog-action" method="post" action="/catalog/action">
+                <input type="hidden" name="token" value="{{ action.token }}">
+                <button type="submit">{{ action.label }}</button>
+              </form>
+            {% endfor %}
+          </div>
+        {% else %}
+          {% if not outcome.imported_names and not outcome.existing_names %}
+            <p>Каталог не прислал вариантов. Попробуйте другой запрос.</p>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>

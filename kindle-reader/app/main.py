@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import auth, books, config, convert, progress, yandex_disk
+from . import auth, books, catalog, config, convert, progress, yandex_disk
 from .yandex_disk import YandexDiskError
 
 _MIME_TYPES = {
@@ -97,6 +97,71 @@ async def refresh(request: Request):
         return redirect
     books.invalidate_list_cache()
     return RedirectResponse("/", status_code=303)
+
+
+def _catalog_context(
+    *,
+    query: str = "",
+    outcome: catalog.CatalogOutcome | None = None,
+    error: str | None = None,
+) -> dict:
+    return {
+        "query": query,
+        "outcome": outcome,
+        "error": error,
+        "configuration_error": catalog.telegram_catalog.configuration_error(),
+    }
+
+
+@app.get("/catalog")
+async def catalog_page(request: Request):
+    if redirect := _require_auth(request):
+        return redirect
+    return templates.TemplateResponse(
+        request, "catalog.html", _catalog_context()
+    )
+
+
+@app.post("/catalog/search")
+async def catalog_search(request: Request, query: str = Form(...)):
+    if redirect := _require_auth(request):
+        return redirect
+
+    outcome = None
+    error = None
+    try:
+        outcome = await catalog.telegram_catalog.search(query)
+        if outcome.imported_names:
+            books.invalidate_list_cache()
+    except catalog.CatalogError as exc:
+        error = str(exc)
+
+    return templates.TemplateResponse(
+        request,
+        "catalog.html",
+        _catalog_context(query=query, outcome=outcome, error=error),
+    )
+
+
+@app.post("/catalog/action")
+async def catalog_action(request: Request, token: str = Form(...)):
+    if redirect := _require_auth(request):
+        return redirect
+
+    outcome = None
+    error = None
+    try:
+        outcome = await catalog.telegram_catalog.activate(token)
+        if outcome.imported_names:
+            books.invalidate_list_cache()
+    except catalog.CatalogError as exc:
+        error = str(exc)
+
+    return templates.TemplateResponse(
+        request,
+        "catalog.html",
+        _catalog_context(outcome=outcome, error=error),
+    )
 
 
 @app.get("/download")

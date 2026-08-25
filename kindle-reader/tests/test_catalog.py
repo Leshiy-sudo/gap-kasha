@@ -1,0 +1,149 @@
+import os
+import unittest
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
+
+os.environ.setdefault("YANDEX_TOKEN", "test-token")
+os.environ.setdefault("SECRET_KEY", "test-secret")
+os.environ.setdefault("PASSWORD_HASH", "test-hash")
+os.environ.setdefault("PASSWORD_SALT", "00" * 16)
+
+from app import catalog, config, yandex_disk  # noqa: E402
+
+
+class FakeButton:
+    def __init__(self, text: str, url: str | None = None):
+        self.text = text
+        self.url = url
+
+
+class FakeMessage:
+    def __init__(
+        self,
+        message_id: int,
+        *,
+        text: str = "",
+        buttons=None,
+        filename: str | None = None,
+    ):
+        self.id = message_id
+        self.raw_text = text
+        self.buttons = buttons
+        self.file = SimpleNamespace(name=filename) if filename else None
+        self.edit_date = None
+
+    async def get_buttons(self):
+        return self.buttons
+
+
+class FakeClient:
+    def __init__(self, data: bytes = b"book-data"):
+        self.data = data
+        self.downloaded = []
+
+    async def download_media(self, message, file):
+        self.downloaded.append((message.id, file))
+        return self.data
+
+
+class ActionCodecTests(unittest.TestCase):
+    def test_round_trip(self):
+        codec = catalog.ActionCodec("secret")
+        self.assertEqual(codec.decode(codec.encode(123, 2, 1)), (123, 2, 1))
+
+    def test_rejects_tampered_token(self):
+        codec = catalog.ActionCodec("secret")
+        token = codec.encode(123, 2, 1)
+        with self.assertRaisesRegex(catalog.CatalogError, "устарело"):
+            codec.decode(token + "x")
+
+
+class CatalogOutcomeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_exposes_callback_buttons_as_signed_actions(self):
+        service = catalog.TelegramCatalog()
+        message = FakeMessage(
+            77,
+            text="Выберите формат",
+            buttons=[
+                [FakeButton("FB2"), FakeButton("Сайт", "https://example.com")]
+            ],
+        )
+
+        outcome = await service._build_outcome(
+            FakeClient(), [message], import_documents=False
+        )
+
+        self.assertEqual(outcome.entries[0].text, "Выберите формат")
+        self.assertEqual([item.label for item in outcome.entries[0].actions], ["FB2"])
+        self.assertEqual(
+            service._actions.decode(outcome.entries[0].actions[0].token),
+            (77, 0, 0),
+        )
+
+    async def test_downloads_and_uploads_supported_document(self):
+        service = catalog.TelegramCatalog()
+        client = FakeClient()
+        message = FakeMessage(88, filename="Book.FB2")
+        upload = AsyncMock(return_value="disk:/Книги/Book.FB2")
+
+        with patch.object(yandex_disk, "upload_book", upload):
+            outcome = await service._build_outcome(
+                client, [message], import_documents=True
+            )
+
+        upload.assert_awaited_once_with(b"book-data", "Book.FB2")
+        self.assertEqual(client.downloaded, [(88, bytes)])
+        self.assertEqual(outcome.imported_names, ["Book.FB2"])
+
+    async def test_reports_existing_document(self):
+        service = catalog.TelegramCatalog()
+        message = FakeMessage(89, filename="Book.fb2")
+        upload = AsyncMock(
+            side_effect=yandex_disk.YandexDiskConflictError("already exists")
+        )
+
+        with patch.object(yandex_disk, "upload_book", upload):
+            outcome = await service._build_outcome(
+                FakeClient(), [message], import_documents=True
+            )
+
+        self.assertEqual(outcome.existing_names, ["Book.fb2"])
+
+    async def test_does_not_download_unsupported_document(self):
+        service = catalog.TelegramCatalog()
+        client = FakeClient()
+        message = FakeMessage(90, filename="Book.epub")
+
+        outcome = await service._build_outcome(
+            client, [message], import_documents=True
+        )
+
+        self.assertEqual(client.downloaded, [])
+        self.assertEqual(outcome.unsupported_names, ["Book.epub"])
+
+    async def test_reports_storage_failure_as_catalog_error(self):
+        service = catalog.TelegramCatalog()
+        message = FakeMessage(91, filename="Book.fb2")
+        upload = AsyncMock(side_effect=yandex_disk.YandexDiskError("failure"))
+
+        with (
+            patch.object(yandex_disk, "upload_book", upload),
+            self.assertRaisesRegex(catalog.CatalogError, "сохранить"),
+        ):
+            await service._build_outcome(
+                FakeClient(), [message], import_documents=True
+            )
+
+
+class ConfigurationTests(unittest.TestCase):
+    def test_reports_missing_api_credentials(self):
+        service = catalog.TelegramCatalog()
+        with (
+            patch.object(config, "TELEGRAM_API_ID", 0),
+            patch.object(config, "TELEGRAM_API_HASH", ""),
+        ):
+            self.assertIn("не настроен", service.configuration_error())
+
+
+if __name__ == "__main__":
+    unittest.main()
