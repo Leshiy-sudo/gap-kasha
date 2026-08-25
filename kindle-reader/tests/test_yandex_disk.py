@@ -48,7 +48,10 @@ class UploadBookTests(unittest.IsolatedAsyncioTestCase):
             FakeResponse(200, {"href": "https://upload.example/file"}),
             FakeResponse(201),
         )
-        with patch.object(yandex_disk.httpx, "AsyncClient", return_value=client):
+        with (
+            patch.object(yandex_disk.config, "YANDEX_BOOKS_PATH", "/Книги"),
+            patch.object(yandex_disk.httpx, "AsyncClient", return_value=client),
+        ):
             path = await yandex_disk.upload_book(b"book-data", "book.fb2")
 
         self.assertEqual(path, "disk:/Книги/book.fb2")
