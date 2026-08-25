@@ -1,6 +1,6 @@
 import time
 
-from . import config, yandex_disk
+from . import config, local_library, yandex_disk
 from .paginate import paginate
 from .parsers.fb2 import parse_fb2
 from .parsers.txt import parse_txt
@@ -14,7 +14,11 @@ _book_cache: dict[str, dict] = {}
 async def get_book_list() -> list[dict]:
     now = time.time()
     if _list_cache["items"] is None or now - _list_cache["ts"] > LIST_TTL_SECONDS:
-        _list_cache["items"] = await yandex_disk.list_books()
+        remote_items = await yandex_disk.list_books()
+        local_items = await local_library.list_books()
+        _list_cache["items"] = sorted(
+            remote_items + local_items, key=lambda item: item["name"].lower()
+        )
         _list_cache["ts"] = now
     return _list_cache["items"]
 
@@ -37,7 +41,7 @@ async def get_book(path: str) -> dict:
     if cached:
         return cached
 
-    data = await yandex_disk.download_book(path)
+    data = await download_book(path)
     if path.lower().endswith(".txt"):
         title, paragraphs = parse_txt(data)
     else:
@@ -49,3 +53,9 @@ async def get_book(path: str) -> dict:
     }
     _book_cache[path] = result
     return result
+
+
+async def download_book(path: str) -> bytes:
+    if path.startswith(local_library.PATH_PREFIX):
+        return await local_library.download_book(path)
+    return await yandex_disk.download_book(path)

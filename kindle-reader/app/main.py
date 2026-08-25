@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import auth, books, catalog, config, convert, progress, yandex_disk
+from . import auth, books, catalog, config, convert, local_library, progress
 from .yandex_disk import YandexDiskError
 
 _MIME_TYPES = {
@@ -170,8 +170,8 @@ async def download(request: Request, path: str, fmt: str | None = None):
         return redirect
 
     try:
-        data = await yandex_disk.download_book(path)
-    except YandexDiskError as exc:
+        data = await books.download_book(path)
+    except (YandexDiskError, local_library.LocalLibraryError) as exc:
         return Response(f"Не удалось скачать файл: {exc}", status_code=502)
 
     name = path.rsplit("/", 1)[-1]
@@ -212,7 +212,7 @@ async def read(request: Request, path: str, page: int | None = None, fs: int | N
     book = None
     try:
         book = await books.get_book(path)
-    except YandexDiskError as exc:
+    except (YandexDiskError, local_library.LocalLibraryError) as exc:
         error = str(exc)
 
     if error:

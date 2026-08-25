@@ -55,6 +55,10 @@ TELEGRAM_CATALOG_TIMEOUT_SECONDS = int(
 TELEGRAM_ACTION_MAX_AGE_SECONDS = int(
     os.environ.get("TELEGRAM_ACTION_MAX_AGE_SECONDS", "600")
 )
+_local_books_value = os.environ.get("LOCAL_BOOKS_PATH", "data/imported_books")
+LOCAL_BOOKS_PATH = Path(_local_books_value)
+if not LOCAL_BOOKS_PATH.is_absolute():
+    LOCAL_BOOKS_PATH = PROJECT_DIR / LOCAL_BOOKS_PATH
 
 # Ставь false только для локальной разработки по http://127.0.0.1 —
 # на проде за HTTPS должно быть true, иначе браузер cookie не примет.

@@ -8,7 +8,7 @@ os.environ.setdefault("SECRET_KEY", "test-secret")
 os.environ.setdefault("PASSWORD_HASH", "test-hash")
 os.environ.setdefault("PASSWORD_SALT", "00" * 16)
 
-from app import catalog, config, yandex_disk  # noqa: E402
+from app import catalog, config, local_library  # noqa: E402
 
 
 class FakeButton:
@@ -127,7 +127,7 @@ class CatalogOutcomeTests(unittest.IsolatedAsyncioTestCase):
         message = FakeMessage(88, filename="Book.FB2")
         upload = AsyncMock(return_value="disk:/Книги/Book.FB2")
 
-        with patch.object(yandex_disk, "upload_book", upload):
+        with patch.object(local_library, "save_book", upload):
             outcome = await service._build_outcome(
                 client, [message], import_documents=True
             )
@@ -140,10 +140,10 @@ class CatalogOutcomeTests(unittest.IsolatedAsyncioTestCase):
         service = catalog.TelegramCatalog()
         message = FakeMessage(89, filename="Book.fb2")
         upload = AsyncMock(
-            side_effect=yandex_disk.YandexDiskConflictError("already exists")
+            side_effect=local_library.LocalLibraryConflictError("already exists")
         )
 
-        with patch.object(yandex_disk, "upload_book", upload):
+        with patch.object(local_library, "save_book", upload):
             outcome = await service._build_outcome(
                 FakeClient(), [message], import_documents=True
             )
@@ -165,10 +165,10 @@ class CatalogOutcomeTests(unittest.IsolatedAsyncioTestCase):
     async def test_reports_storage_failure_as_catalog_error(self):
         service = catalog.TelegramCatalog()
         message = FakeMessage(91, filename="Book.fb2")
-        upload = AsyncMock(side_effect=yandex_disk.YandexDiskError("failure"))
+        upload = AsyncMock(side_effect=local_library.LocalLibraryError("failure"))
 
         with (
-            patch.object(yandex_disk, "upload_book", upload),
+            patch.object(local_library, "save_book", upload),
             self.assertRaisesRegex(catalog.CatalogError, "сохранить"),
         ):
             await service._build_outcome(
