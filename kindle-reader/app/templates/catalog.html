@@ -13,6 +13,8 @@
       <a class="button" href="/">Моя библиотека</a>
     </div>
 
+    <p class="catalog-help">Найдите книгу, выберите нужный вариант, затем нажмите «FB2 — добавить в библиотеку». После загрузки откройте библиотеку.</p>
+
     {% if configuration_error %}
       <p class="error">{{ configuration_error }}. Поиск станет доступен после подключения отдельного аккаунта.</p>
     {% else %}
@@ -49,7 +51,8 @@
       {% endif %}
 
       {% if outcome.unsupported_names %}
-        <p class="error">Каталог прислал неподдерживаемый файл: {{ outcome.unsupported_names | join(', ') }}</p>
+        <p class="error">Этот формат не подходит для веб-читалки: {{ outcome.unsupported_names | join(', ') }}. Повторите поиск и выберите FB2.</p>
+        <p><a class="button" href="/catalog">Повторить поиск</a></p>
       {% endif %}
 
       <div class="catalog-results">

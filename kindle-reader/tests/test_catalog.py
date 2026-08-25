@@ -75,7 +75,12 @@ class CatalogOutcomeTests(unittest.IsolatedAsyncioTestCase):
             77,
             text="Выберите формат",
             buttons=[
-                [FakeButton("FB2"), FakeButton("Сайт", "https://example.com")]
+                [
+                    FakeButton("FB2"),
+                    FakeButton("EPUB"),
+                    FakeButton("MOBI"),
+                    FakeButton("Сайт", "https://example.com"),
+                ]
             ],
         )
 
@@ -84,7 +89,10 @@ class CatalogOutcomeTests(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(outcome.entries[0].text, "Выберите формат")
-        self.assertEqual([item.label for item in outcome.entries[0].actions], ["FB2"])
+        self.assertEqual(
+            [item.label for item in outcome.entries[0].actions],
+            ["FB2 — добавить в библиотеку"],
+        )
         self.assertEqual(
             service._actions.decode(outcome.entries[0].actions[0].token),
             catalog.ActionTarget(kind="button", message_id=77, row=0, column=0),
@@ -119,6 +127,26 @@ class CatalogOutcomeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             service._actions.decode(outcome.entries[0].actions[0].token),
             catalog.ActionTarget(kind="command", command="/download175105"),
+        )
+
+    async def test_hides_unsupported_text_format_commands(self):
+        service = catalog.TelegramCatalog()
+        message = FakeMessage(
+            79,
+            text="/fb2175105\n/epub175105\n/mobi175105",
+        )
+
+        outcome = await service._build_outcome(
+            FakeClient(), [message], import_documents=False
+        )
+
+        self.assertEqual(
+            [action.label for action in outcome.entries[0].actions],
+            ["FB2 — добавить в библиотеку"],
+        )
+        self.assertEqual(
+            service._actions.decode(outcome.entries[0].actions[0].token),
+            catalog.ActionTarget(kind="command", command="/fb2175105"),
         )
 
     async def test_downloads_and_uploads_supported_document(self):

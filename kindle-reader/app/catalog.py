@@ -18,6 +18,9 @@ from .telegram_bot import normalize_book_filename
 logger = logging.getLogger("kindle_reader.catalog")
 logging.getLogger("telethon").setLevel(logging.WARNING)
 
+_KNOWN_FORMATS = ("fb2", "txt", "epub", "mobi", "pdf", "html", "rtf")
+_SUPPORTED_FORMATS = {"fb2", "txt"}
+
 
 class CatalogError(RuntimeError):
     pass
@@ -286,6 +289,14 @@ class TelegramCatalog:
         )
         return message.raw_text, message.edit_date, labels
 
+    @staticmethod
+    def _format_name(value: str) -> str | None:
+        candidate = value.strip().lower().lstrip("/.")
+        match = re.fullmatch(
+            rf"({'|'.join(_KNOWN_FORMATS)})(?:[_-]?\d+)?", candidate
+        )
+        return match.group(1) if match else None
+
     async def _build_outcome(
         self,
         client: TelegramClient,
@@ -330,6 +341,11 @@ class TelegramCatalog:
                     label = " ".join(str(getattr(button, "text", "")).split())
                     if not label or getattr(button, "url", None):
                         continue
+                    format_name = self._format_name(label)
+                    if format_name and format_name not in _SUPPORTED_FORMATS:
+                        continue
+                    if format_name:
+                        label = f"{format_name.upper()} — добавить в библиотеку"
                     actions.append(
                         CatalogAction(
                             label=label[:100],
@@ -370,6 +386,9 @@ class TelegramCatalog:
                 if command in seen:
                     continue
                 seen.add(command)
+                format_name = self._format_name(command)
+                if format_name and format_name not in _SUPPORTED_FORMATS:
+                    continue
                 title = next(
                     (
                         candidate
@@ -378,7 +397,10 @@ class TelegramCatalog:
                     ),
                     command,
                 )
-                label = f"Выбрать: {title}" if title != command else command
+                if format_name:
+                    label = f"{format_name.upper()} — добавить в библиотеку"
+                else:
+                    label = f"Выбрать: {title}" if title != command else command
                 actions.append(
                     CatalogAction(
                         label=label[:100],
