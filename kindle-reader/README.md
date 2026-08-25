@@ -49,15 +49,10 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 1. Создай отдельный Telegram-аккаунт и один раз нажми **Start** у
    `@flibustafreebookbot`.
-2. На `https://my.telegram.org` открой **API Development tools** и создай
-   приложение. Запиши `api_id` и `api_hash` в `.env`:
-   ```dotenv
-   TELEGRAM_API_ID=123456
-   TELEGRAM_API_HASH=...
-   TELEGRAM_SESSION_PATH=data/telegram_catalog
-   TELEGRAM_SOURCE_BOT=flibustafreebookbot
-   ```
-3. Выполни интерактивный вход:
+2. На `https://my.telegram.org` открой **API Development tools**, создай
+   приложение и сохрани показанные `api_id` и `api_hash`.
+3. Выполни интерактивную настройку. Если значения ещё не записаны в `.env`,
+   команда сама безопасно их запросит:
    ```bash
    python scripts/telegram_login.py
    ```
