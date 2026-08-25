@@ -40,3 +40,8 @@ def get_all() -> dict[str, int]:
     with _connect() as conn:
         rows = conn.execute("SELECT book_path, page FROM progress").fetchall()
     return dict(rows)
+
+
+def delete(book_path: str) -> None:
+    with _connect() as conn:
+        conn.execute("DELETE FROM progress WHERE book_path = ?", (book_path,))

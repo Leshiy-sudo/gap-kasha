@@ -22,7 +22,17 @@ class LocalLibraryTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(path, "local:/Book.fb2")
         self.assertEqual(items[0]["name"], "Book.fb2")
+        self.assertIn("created", items[0])
         self.assertEqual(data, b"book")
+
+    async def test_deletes_book(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            with patch.object(config, "LOCAL_BOOKS_PATH", Path(temporary)):
+                path = await local_library.save_book(b"book", "Book.fb2")
+                await local_library.delete_book(path)
+                items = await local_library.list_books()
+
+        self.assertEqual(items, [])
 
     async def test_does_not_overwrite_existing_book(self):
         with tempfile.TemporaryDirectory() as temporary:

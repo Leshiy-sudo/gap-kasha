@@ -29,6 +29,7 @@ FONT_SIZE_COOKIE = "font_size"
 DEFAULT_FONT_SIZE = 2
 MIN_FONT_SIZE = 1
 MAX_FONT_SIZE = 5
+LIBRARY_PAGE_SIZE = 10
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -51,6 +52,34 @@ def _require_auth(request: Request) -> RedirectResponse | None:
             original_path += f"?{request.url.query}"
         return RedirectResponse(f"/login?next={quote(original_path)}", status_code=303)
     return None
+
+
+def _paginate_items(
+    items: list[dict], requested_page: int
+) -> tuple[list[dict], int, int]:
+    total_pages = max(1, (len(items) + LIBRARY_PAGE_SIZE - 1) // LIBRARY_PAGE_SIZE)
+    page = max(1, min(requested_page, total_pages))
+    start = (page - 1) * LIBRARY_PAGE_SIZE
+    return items[start : start + LIBRARY_PAGE_SIZE], page, total_pages
+
+
+def _pagination_window(page: int, total_pages: int) -> list[int | None]:
+    visible = {1, total_pages}
+    visible.update(range(max(1, page - 2), min(total_pages, page + 2) + 1))
+    result: list[int | None] = []
+    previous = 0
+    for number in sorted(visible):
+        if previous and number - previous > 1:
+            result.append(None)
+        result.append(number)
+        previous = number
+    return result
+
+
+def _book_name(path: str) -> str:
+    if path.startswith(local_library.PATH_PREFIX):
+        return path[len(local_library.PATH_PREFIX) :]
+    return path.rsplit("/", 1)[-1]
 
 
 @app.get("/login")
@@ -86,7 +115,7 @@ async def logout():
 
 
 @app.get("/")
-async def library(request: Request):
+async def library(request: Request, page: int = 1, deleted: str | None = None):
     if redirect := _require_auth(request):
         return redirect
 
@@ -97,19 +126,80 @@ async def library(request: Request):
     except YandexDiskError as exc:
         error = str(exc)
 
+    total_items = len(items)
+    page_items, page, total_pages = _paginate_items(items, page)
     saved_pages = progress.get_all()
 
     return templates.TemplateResponse(
-        request, "library.html", {"items": items, "error": error, "saved_pages": saved_pages}
+        request,
+        "library.html",
+        {
+            "items": page_items,
+            "error": error,
+            "deleted": deleted,
+            "saved_pages": saved_pages,
+            "page": page,
+            "total_pages": total_pages,
+            "total_items": total_items,
+            "pagination": _pagination_window(page, total_pages),
+        },
     )
 
 
 @app.get("/refresh")
-async def refresh(request: Request):
+async def refresh(request: Request, page: int = 1):
     if redirect := _require_auth(request):
         return redirect
     books.invalidate_list_cache()
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse(f"/?page={max(1, page)}", status_code=303)
+
+
+@app.get("/delete")
+async def delete_confirm(request: Request, path: str, page: int = 1):
+    if redirect := _require_auth(request):
+        return redirect
+    is_local = path.startswith(local_library.PATH_PREFIX)
+    return templates.TemplateResponse(
+        request,
+        "delete.html",
+        {
+            "path": path,
+            "name": _book_name(path),
+            "page": max(1, page),
+            "is_local": is_local,
+            "error": None,
+        },
+    )
+
+
+@app.post("/delete")
+async def delete_submit(
+    request: Request, path: str = Form(...), page: int = Form(1)
+):
+    if redirect := _require_auth(request):
+        return redirect
+
+    name = _book_name(path)
+    try:
+        await books.delete_book(path)
+        progress.delete(path)
+    except (YandexDiskError, local_library.LocalLibraryError) as exc:
+        return templates.TemplateResponse(
+            request,
+            "delete.html",
+            {
+                "path": path,
+                "name": name,
+                "page": max(1, page),
+                "is_local": path.startswith(local_library.PATH_PREFIX),
+                "error": str(exc),
+            },
+            status_code=502,
+        )
+
+    return RedirectResponse(
+        f"/?page={max(1, page)}&deleted={quote(name)}", status_code=303
+    )
 
 
 def _catalog_context(

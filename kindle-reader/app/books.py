@@ -1,4 +1,5 @@
 import time
+from datetime import datetime, timedelta, timezone
 
 from . import config, local_library, yandex_disk
 from .paginate import paginate
@@ -9,6 +10,19 @@ LIST_TTL_SECONDS = 300
 
 _list_cache: dict = {"items": None, "ts": 0.0}
 _book_cache: dict[str, dict] = {}
+_DISPLAY_TIMEZONE = timezone(timedelta(hours=5))
+
+
+def format_added_at(value: str | None) -> str:
+    if not value:
+        return "Дата неизвестна"
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return "Дата неизвестна"
+    return parsed.astimezone(_DISPLAY_TIMEZONE).strftime("%d.%m.%Y %H:%M")
 
 
 async def get_book_list() -> list[dict]:
@@ -16,8 +30,15 @@ async def get_book_list() -> list[dict]:
     if _list_cache["items"] is None or now - _list_cache["ts"] > LIST_TTL_SECONDS:
         remote_items = await yandex_disk.list_books()
         local_items = await local_library.list_books()
+        items = []
+        for original in remote_items + local_items:
+            item = dict(original)
+            item["added_at_display"] = format_added_at(
+                item.get("created") or item.get("modified")
+            )
+            items.append(item)
         _list_cache["items"] = sorted(
-            remote_items + local_items, key=lambda item: item["name"].lower()
+            items, key=lambda item: item["name"].lower()
         )
         _list_cache["ts"] = now
     return _list_cache["items"]
@@ -59,3 +80,12 @@ async def download_book(path: str) -> bytes:
     if path.startswith(local_library.PATH_PREFIX):
         return await local_library.download_book(path)
     return await yandex_disk.download_book(path)
+
+
+async def delete_book(path: str) -> None:
+    if path.startswith(local_library.PATH_PREFIX):
+        await local_library.delete_book(path)
+    else:
+        await yandex_disk.delete_book(path)
+    _book_cache.pop(path, None)
+    invalidate_list_cache()

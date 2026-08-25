@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 from pathlib import Path
 
 from . import config
@@ -58,16 +59,22 @@ def _list_books() -> list[dict]:
     except OSError as exc:
         raise LocalLibraryError("Не удалось прочитать локальную библиотеку") from exc
 
-    items = [
-        {
-            "name": path.name,
-            "path": f"{PATH_PREFIX}{path.name}",
-            "type": "file",
-            "size": path.stat().st_size,
-        }
-        for path in paths
-        if path.name.lower().endswith((".fb2", ".fb2.zip", ".txt"))
-    ]
+    items = []
+    for path in paths:
+        if not path.name.lower().endswith((".fb2", ".fb2.zip", ".txt")):
+            continue
+        stat = path.stat()
+        items.append(
+            {
+                "name": path.name,
+                "path": f"{PATH_PREFIX}{path.name}",
+                "type": "file",
+                "size": stat.st_size,
+                "created": datetime.fromtimestamp(
+                    stat.st_mtime, tz=timezone.utc
+                ).isoformat(),
+            }
+        )
     items.sort(key=lambda item: item["name"].lower())
     return items
 
@@ -86,3 +93,17 @@ def _download(book_path: str) -> bytes:
 
 async def download_book(book_path: str) -> bytes:
     return await asyncio.to_thread(_download, book_path)
+
+
+def _delete(book_path: str) -> None:
+    path = _file_path(book_path)
+    try:
+        path.unlink()
+    except FileNotFoundError as exc:
+        raise LocalLibraryError("Книга уже удалена") from exc
+    except OSError as exc:
+        raise LocalLibraryError("Не удалось удалить локальную книгу") from exc
+
+
+async def delete_book(book_path: str) -> None:
+    await asyncio.to_thread(_delete, book_path)
