@@ -16,6 +16,14 @@ class LocalLibraryConflictError(LocalLibraryError):
     pass
 
 
+def _ensure_directory() -> None:
+    try:
+        config.LOCAL_BOOKS_PATH.mkdir(parents=True, exist_ok=True, mode=0o700)
+        config.LOCAL_BOOKS_PATH.chmod(0o700)
+    except OSError as exc:
+        raise LocalLibraryError("Не удалось подготовить локальную библиотеку") from exc
+
+
 def _file_path(book_path: str) -> Path:
     if not book_path.startswith(PATH_PREFIX):
         raise LocalLibraryError("Некорректный путь локальной книги")
@@ -27,10 +35,11 @@ def _file_path(book_path: str) -> Path:
 
 def _save(data: bytes, name: str) -> str:
     path = _file_path(f"{PATH_PREFIX}{name}")
-    path.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_directory()
     try:
         with path.open("xb") as destination:
             destination.write(data)
+        path.chmod(0o600)
     except FileExistsError as exc:
         raise LocalLibraryConflictError("Книга уже существует") from exc
     except OSError as exc:
@@ -44,7 +53,7 @@ async def save_book(data: bytes, name: str) -> str:
 
 def _list_books() -> list[dict]:
     try:
-        config.LOCAL_BOOKS_PATH.mkdir(parents=True, exist_ok=True)
+        _ensure_directory()
         paths = [path for path in config.LOCAL_BOOKS_PATH.iterdir() if path.is_file()]
     except OSError as exc:
         raise LocalLibraryError("Не удалось прочитать локальную библиотеку") from exc
