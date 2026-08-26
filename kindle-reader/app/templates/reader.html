@@ -12,21 +12,21 @@
       <p class="error">Не удалось открыть книгу: {{ error }}</p>
       <p><a href="/">← К списку книг</a></p>
     {% else %}
-      <div class="nav">
-        <a href="/">← Список</a>
-        <span class="page-indicator">{{ page }} / {{ total }}</span>
-        <span class="font-controls">
+      <div class="reader-toolbar">
+        <span class="reader-toolbar-left">
+          <a class="reader-control" href="/">← Книги</a>
+          <span class="page-indicator">{{ page }} / {{ total }}</span>
+        </span>
+        <span class="reader-toolbar-right">
           {% if font_size > min_font_size %}
-            <a href="/read?path={{ path | urlencode }}&page={{ page }}&fs={{ font_size - 1 }}">A−</a>
+            <a class="reader-control" href="/read?path={{ path | urlencode }}&page={{ page }}&fs={{ font_size - 1 }}">A−</a>
           {% endif %}
           {% if font_size < max_font_size %}
-            <a href="/read?path={{ path | urlencode }}&page={{ page }}&fs={{ font_size + 1 }}">A+</a>
+            <a class="reader-control" href="/read?path={{ path | urlencode }}&page={{ page }}&fs={{ font_size + 1 }}">A+</a>
           {% endif %}
+          <a class="reader-control" href="/download?path={{ path | urlencode }}">Скачать</a>
+          <a class="reader-control" href="/download?path={{ path | urlencode }}&fmt=mobi">Kindle</a>
         </span>
-      </div>
-      <div class="nav">
-        <a class="download" href="/download?path={{ path | urlencode }}">Скачать</a>
-        <a class="download" href="/download?path={{ path | urlencode }}&fmt=mobi">Скачать (Kindle)</a>
       </div>
 
       <h2 class="book-title">{{ title }}</h2>
@@ -43,17 +43,17 @@
         {% endfor %}
       </div>
 
-      <div class="nav nav-bottom">
+      <div class="reader-nav-bottom">
         {% if page > 1 %}
-          <a href="/read?path={{ path | urlencode }}&page={{ page - 1 }}">← Назад</a>
+          <a class="reader-control reader-previous" href="/read?path={{ path | urlencode }}&page={{ page - 1 }}">← Назад</a>
         {% else %}
-          <span></span>
+          <span class="reader-previous"></span>
         {% endif %}
         <span class="page-indicator">{{ page }} / {{ total }}</span>
         {% if page < total %}
-          <a href="/read?path={{ path | urlencode }}&page={{ page + 1 }}">Вперёд →</a>
+          <a class="reader-control reader-next" href="/read?path={{ path | urlencode }}&page={{ page + 1 }}">Вперёд →</a>
         {% else %}
-          <span></span>
+          <span class="reader-next"></span>
         {% endif %}
       </div>
     {% endif %}

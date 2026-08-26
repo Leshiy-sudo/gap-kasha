@@ -374,46 +374,66 @@ a {
 
 /* --- Читалка --- */
 
-.nav {
-  border-bottom: 2px solid #000;
+.page.reader {
+  padding-top: 10px;
   padding-bottom: 8px;
-  margin-bottom: 16px;
-  font-size: 1.2em;
 }
 
-.nav-bottom {
-  border-bottom: none;
-  border-top: 2px solid #000;
-  padding-top: 12px;
-  margin-top: 24px;
+.reader-toolbar {
+  overflow: hidden;
+  border-bottom: 1px solid #000;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  font-family: Arial, sans-serif;
+  font-size: 0.9em;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
-.nav a {
-  display: inline-block;
-  padding: 8px 4px;
-}
-
-.nav-bottom a:first-child {
+.reader-toolbar-left {
   float: left;
 }
 
-.nav-bottom a:last-child {
+.reader-toolbar-right {
   float: right;
 }
 
+.reader-control {
+  display: inline-block;
+  border: 1px solid #000;
+  padding: 4px 6px;
+  margin-left: 3px;
+  color: #000;
+  text-decoration: none;
+}
+
+.reader-toolbar-left .reader-control {
+  margin-left: 0;
+}
+
 .page-indicator {
-  display: block;
-  text-align: center;
+  display: inline-block;
+  margin-left: 6px;
+  font-family: Arial, sans-serif;
+  white-space: nowrap;
 }
 
-.book-title {
-  font-size: 1.1em;
-  color: #444;
-  margin: 0 0 20px;
+.reader .book-title {
+  font-family: Arial, sans-serif;
+  font-size: 0.95em;
+  font-weight: normal;
+  color: #222;
+  margin: 5px 0;
+  line-height: 1.15;
 }
 
-.text {
-  line-height: 1.5;
+.reader .text {
+  line-height: 1.24;
+}
+
+.reader .text p {
+  margin: 0 0 0.48em;
+  text-align: justify;
 }
 
 .text.fs-1 { font-size: 0.85em; }
@@ -422,25 +442,57 @@ a {
 .text.fs-4 { font-size: 1.2em; }
 .text.fs-5 { font-size: 1.4em; }
 
-.font-controls {
-  display: inline-block;
-}
-
-.font-controls a {
-  display: inline-block;
-  border: 1px solid #000;
-  padding: 3px 10px;
-  margin-left: 4px;
-  text-decoration: none;
-}
-
-.text p {
-  margin: 0 0 1em;
-  text-align: justify;
-}
-
-.text h3 {
+.reader .text h3 {
   font-size: 1.15em;
   text-align: center;
-  margin: 1.2em 0 0.8em;
+  margin: 0.75em 0 0.45em;
+}
+
+.reader-nav-bottom {
+  min-height: 28px;
+  border-top: 1px solid #000;
+  padding-top: 6px;
+  margin-top: 7px;
+  text-align: center;
+  font-size: 0.9em;
+  line-height: 1.15;
+}
+
+.reader-nav-bottom .page-indicator {
+  margin-left: 0;
+  padding-top: 5px;
+}
+
+.reader-previous {
+  float: left;
+  min-width: 54px;
+}
+
+.reader-next {
+  float: right;
+  min-width: 54px;
+}
+
+@media (max-width: 480px) {
+  .page.reader {
+    padding: 8px 10px 6px;
+  }
+
+  .reader-toolbar-left,
+  .reader-toolbar-right {
+    float: none;
+    display: block;
+  }
+
+  .reader-toolbar-right {
+    margin-top: 4px;
+  }
+
+  .reader-toolbar-right .reader-control:first-child {
+    margin-left: 0;
+  }
+
+  .reader .text {
+    line-height: 1.22;
+  }
 }
