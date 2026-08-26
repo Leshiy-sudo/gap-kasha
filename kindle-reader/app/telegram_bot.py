@@ -8,8 +8,8 @@ from typing import Any
 import httpx
 
 from . import config, yandex_disk
+from .formats import BOOK_SUFFIXES as SUPPORTED_BOOK_SUFFIXES
 
-SUPPORTED_BOOK_SUFFIXES = (".fb2.zip", ".fb2", ".txt")
 OFFSET_PATH = Path(__file__).resolve().parent.parent / "data" / "telegram_offset.txt"
 
 logger = logging.getLogger("kindle_reader.telegram")
@@ -32,7 +32,7 @@ def normalize_book_filename(raw_name: str) -> str:
         None,
     )
     if suffix is None:
-        raise ValueError("Поддерживаются только FB2, FB2.ZIP и TXT")
+        raise ValueError("Поддерживаются только FB2, FB2.ZIP, EPUB, MOBI и TXT")
 
     max_length = 180
     if len(name) > max_length:
@@ -145,14 +145,16 @@ async def handle_update(
         await client.send_message(
             chat_id,
             "Перешлите сюда документ из книжного бота. "
-            "Поддерживаются FB2, FB2.ZIP и TXT размером до "
+            "Поддерживаются FB2, FB2.ZIP, EPUB, MOBI и TXT размером до "
             f"{max_file_size // (1024 * 1024)} МБ.",
         )
         return
 
     document = message.get("document")
     if not isinstance(document, dict):
-        await client.send_message(chat_id, "Нужен документ FB2, FB2.ZIP или TXT.")
+        await client.send_message(
+            chat_id, "Нужен документ FB2, FB2.ZIP, EPUB, MOBI или TXT."
+        )
         return
 
     try:

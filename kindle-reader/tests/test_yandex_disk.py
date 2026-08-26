@@ -106,6 +106,19 @@ class ListBooksTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("items.created", fields)
         self.assertIn("items.modified", fields)
 
+    async def test_lists_epub_and_mobi_but_not_pdf(self):
+        entries = [
+            {"name": name, "path": f"disk:/Книги/{name}", "type": "file"}
+            for name in ("One.epub", "Two.mobi", "Ignored.pdf")
+        ]
+        client = FakeAsyncClient(
+            get_response=FakeResponse(200, {"_embedded": {"items": entries}})
+        )
+        with patch.object(yandex_disk.httpx, "AsyncClient", return_value=client):
+            items = await yandex_disk.list_books()
+
+        self.assertEqual([item["name"] for item in items], ["One.epub", "Two.mobi"])
+
 
 class DeleteBookTests(unittest.IsolatedAsyncioTestCase):
     async def test_moves_book_to_yandex_trash(self):

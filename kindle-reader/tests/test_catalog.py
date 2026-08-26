@@ -91,7 +91,11 @@ class CatalogOutcomeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(outcome.entries[0].text, "Выберите формат")
         self.assertEqual(
             [item.label for item in outcome.entries[0].actions],
-            ["FB2 — добавить в библиотеку"],
+            [
+                "FB2 — добавить в библиотеку",
+                "EPUB — добавить в библиотеку",
+                "MOBI — добавить в библиотеку",
+            ],
         )
         self.assertEqual(
             service._actions.decode(outcome.entries[0].actions[0].token),
@@ -175,7 +179,7 @@ class CatalogOutcomeTests(unittest.IsolatedAsyncioTestCase):
             [action.label for action in outcome.entries[2].actions], ["1", "2"]
         )
 
-    async def test_hides_unsupported_text_format_commands(self):
+    async def test_exposes_all_supported_text_format_commands(self):
         service = catalog.TelegramCatalog()
         message = FakeMessage(
             79,
@@ -188,7 +192,11 @@ class CatalogOutcomeTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             [action.label for entry in outcome.entries for action in entry.actions],
-            ["FB2 — добавить в библиотеку"],
+            [
+                "FB2 — добавить в библиотеку",
+                "EPUB — добавить в библиотеку",
+                "MOBI — добавить в библиотеку",
+            ],
         )
         self.assertEqual(
             service._actions.decode(outcome.entries[0].actions[0].token),
@@ -224,17 +232,19 @@ class CatalogOutcomeTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(outcome.existing_names, ["Book.fb2"])
 
-    async def test_does_not_download_unsupported_document(self):
+    async def test_downloads_supported_epub_document(self):
         service = catalog.TelegramCatalog()
         client = FakeClient()
         message = FakeMessage(90, filename="Book.epub")
+        upload = AsyncMock(return_value="local:/Book.epub")
 
-        outcome = await service._build_outcome(
-            client, [message], import_documents=True
-        )
+        with patch.object(local_library, "save_book", upload):
+            outcome = await service._build_outcome(
+                client, [message], import_documents=True
+            )
 
-        self.assertEqual(client.downloaded, [])
-        self.assertEqual(outcome.unsupported_names, ["Book.epub"])
+        upload.assert_awaited_once_with(b"book-data", "Book.epub")
+        self.assertEqual(outcome.imported_names, ["Book.epub"])
 
     async def test_reports_storage_failure_as_catalog_error(self):
         service = catalog.TelegramCatalog()

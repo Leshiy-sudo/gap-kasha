@@ -43,3 +43,17 @@ class PaginationTests(unittest.TestCase):
             main._pagination_window(20, 40),
             [1, None, 18, 19, 20, 21, 22, None, 40],
         )
+
+
+class LibraryUrlTests(unittest.TestCase):
+    def test_preserves_search_author_page_and_deleted_message(self):
+        url = main._library_url(
+            page=3,
+            q="война и мир",
+            author="Лев Толстой",
+            deleted="Книга.fb2",
+        )
+        self.assertIn("page=3", url)
+        self.assertIn("q=%D0%B2%D0%BE%D0%B9%D0%BD%D0%B0", url)
+        self.assertIn("author=%D0%9B%D0%B5%D0%B2", url)
+        self.assertIn("deleted=%D0%9A%D0%BD%D0%B8%D0%B3%D0%B0.fb2", url)

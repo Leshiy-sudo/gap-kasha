@@ -1,9 +1,10 @@
 import httpx
 
 from . import config
+from .formats import BOOK_SUFFIXES
 
 API_BASE = "https://cloud-api.yandex.net/v1/disk"
-BOOK_EXTENSIONS = (".fb2", ".fb2.zip", ".txt")
+BOOK_EXTENSIONS = BOOK_SUFFIXES
 
 
 class YandexDiskError(RuntimeError):

@@ -1,15 +1,19 @@
 import time
 from datetime import datetime, timedelta, timezone
 
-from . import config, local_library, yandex_disk
+from . import config, convert, local_library, yandex_disk
+from .formats import BOOK_SUFFIXES
 from .paginate import paginate
 from .parsers.fb2 import parse_fb2
 from .parsers.txt import parse_txt
+from .yandex_disk import YandexDiskError
 
 LIST_TTL_SECONDS = 300
 
 _list_cache: dict = {"items": None, "ts": 0.0}
 _book_cache: dict[str, dict] = {}
+_fb2_conversion_cache: dict[str, bytes] = {}
+_last_remote_error: str | None = None
 _DISPLAY_TIMEZONE = timezone(timedelta(hours=5))
 
 
@@ -26,9 +30,15 @@ def format_added_at(value: str | None) -> str:
 
 
 async def get_book_list() -> list[dict]:
+    global _last_remote_error
     now = time.time()
     if _list_cache["items"] is None or now - _list_cache["ts"] > LIST_TTL_SECONDS:
-        remote_items = await yandex_disk.list_books()
+        try:
+            remote_items = await yandex_disk.list_books()
+            _last_remote_error = None
+        except YandexDiskError as exc:
+            remote_items = []
+            _last_remote_error = str(exc)
         local_items = await local_library.list_books()
         items = []
         for original in remote_items + local_items:
@@ -44,13 +54,17 @@ async def get_book_list() -> list[dict]:
     return _list_cache["items"]
 
 
+def last_remote_error() -> str | None:
+    return _last_remote_error
+
+
 def invalidate_list_cache() -> None:
     _list_cache["items"] = None
 
 
-def _title_from_path(path: str) -> str:
+def title_from_path(path: str) -> str:
     name = path.rsplit("/", 1)[-1]
-    for suffix in (".fb2.zip", ".fb2", ".txt"):
+    for suffix in BOOK_SUFFIXES:
         if name.lower().endswith(suffix):
             return name[: -len(suffix)]
     return name
@@ -63,17 +77,33 @@ async def get_book(path: str) -> dict:
         return cached
 
     data = await download_book(path)
-    if path.lower().endswith(".txt"):
+    name = path.rsplit("/", 1)[-1]
+    if name.lower().endswith(".txt"):
         title, paragraphs = parse_txt(data)
     else:
-        title, paragraphs = parse_fb2(data)
+        fb2_data = await get_fb2_bytes(path, name, data)
+        title, paragraphs = parse_fb2(fb2_data)
 
     result = {
-        "title": title or _title_from_path(path),
+        "title": title or title_from_path(path),
         "pages": paginate(paragraphs, config.CHARS_PER_PAGE),
     }
     _book_cache[path] = result
     return result
+
+
+async def get_fb2_bytes(path: str, name: str, data: bytes) -> bytes:
+    lower_name = name.lower()
+    if not lower_name.endswith((".epub", ".mobi")):
+        return data
+
+    cached = _fb2_conversion_cache.get(path)
+    if cached is not None:
+        return cached
+
+    fb2_data = await convert.convert_to_fb2(data, name)
+    _fb2_conversion_cache[path] = fb2_data
+    return fb2_data
 
 
 async def download_book(path: str) -> bytes:
@@ -88,4 +118,5 @@ async def delete_book(path: str) -> None:
     else:
         await yandex_disk.delete_book(path)
     _book_cache.pop(path, None)
+    _fb2_conversion_cache.pop(path, None)
     invalidate_list_cache()

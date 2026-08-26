@@ -146,6 +146,48 @@ a {
   color: #444;
 }
 
+.library-tools {
+  border: 1px solid #000;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0 0 14px;
+}
+
+.library-tools label {
+  display: block;
+  font-size: 0.85em;
+  color: #444;
+  margin: 4px 0;
+}
+
+.library-tools input[type="text"],
+.library-tools select {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 1em;
+  padding: 7px 8px;
+  margin-bottom: 8px;
+  border: 1px solid #000;
+  background: #fff;
+  color: #000;
+}
+
+.library-tools button {
+  font-family: inherit;
+  font-size: 1em;
+  padding: 7px 12px;
+  border: 2px solid #000;
+  border-radius: 6px;
+  background: #000;
+  color: #fff;
+}
+
+.reset-link {
+  display: inline-block;
+  margin-left: 10px;
+}
+
 .book-list {
   list-style: none;
   padding: 0;
@@ -157,12 +199,56 @@ a {
   border-radius: 8px;
   padding: 14px 16px;
   margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.book-cover-wrap {
+  float: left;
+  width: 92px;
+  margin-right: 14px;
+}
+
+.book-cover {
+  display: block;
+  width: 82px;
+  height: 116px;
+  border: 1px solid #000;
+  object-fit: cover;
+}
+
+.book-cover.placeholder {
+  text-align: center;
+  line-height: 116px;
+  font-size: 2em;
+  background: #eee;
+  color: #444;
+  text-decoration: none;
+}
+
+.book-details {
+  overflow: hidden;
 }
 
 .book-name {
   display: block;
   font-size: 1.15em;
   margin-bottom: 6px;
+}
+
+.book-author,
+.book-file-name {
+  display: block;
+  font-size: 0.9em;
+  margin-bottom: 4px;
+}
+
+.book-author {
+  font-weight: bold;
+}
+
+.book-file-name {
+  color: #555;
+  overflow-wrap: break-word;
 }
 
 .book-date {
@@ -263,6 +349,27 @@ a {
 
 .cancel-button {
   margin-left: 6px;
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .book-cover-wrap {
+    width: 72px;
+    margin-right: 10px;
+  }
+
+  .book-cover {
+    width: 64px;
+    height: 92px;
+  }
+
+  .book-cover.placeholder {
+    line-height: 92px;
+  }
 }
 
 /* --- Читалка --- */

@@ -50,9 +50,17 @@ class FilenameTests(unittest.TestCase):
             "My Book.FB2",
         )
 
+    def test_accepts_epub_and_mobi(self):
+        self.assertEqual(
+            telegram_bot.normalize_book_filename("book.epub"), "book.epub"
+        )
+        self.assertEqual(
+            telegram_bot.normalize_book_filename("book.mobi"), "book.mobi"
+        )
+
     def test_rejects_unsupported_format(self):
         with self.assertRaisesRegex(ValueError, "Поддерживаются"):
-            telegram_bot.normalize_book_filename("book.epub")
+            telegram_bot.normalize_book_filename("book.pdf")
 
     def test_limits_filename_length(self):
         name = telegram_bot.normalize_book_filename("a" * 300 + ".fb2.zip")

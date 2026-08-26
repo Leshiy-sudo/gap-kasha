@@ -13,13 +13,13 @@ from telethon import TelegramClient
 from telethon.errors import RPCError
 
 from . import config, local_library
+from .formats import FORMAT_KEYWORDS as _SUPPORTED_FORMATS
 from .telegram_bot import normalize_book_filename
 
 logger = logging.getLogger("kindle_reader.catalog")
 logging.getLogger("telethon").setLevel(logging.WARNING)
 
 _KNOWN_FORMATS = ("fb2", "txt", "epub", "mobi", "pdf", "html", "rtf")
-_SUPPORTED_FORMATS = {"fb2", "txt"}
 
 
 class CatalogError(RuntimeError):

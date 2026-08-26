@@ -47,6 +47,17 @@ class LocalLibraryTests(unittest.IsolatedAsyncioTestCase):
                 with self.assertRaises(local_library.LocalLibraryError):
                     await local_library.download_book("local:/../secret.fb2")
 
+    async def test_lists_epub_and_mobi_books(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "One.epub").write_bytes(b"epub")
+            (root / "Two.mobi").write_bytes(b"mobi")
+            (root / "Ignored.pdf").write_bytes(b"pdf")
+            with patch.object(config, "LOCAL_BOOKS_PATH", root):
+                items = await local_library.list_books()
+
+        self.assertEqual([item["name"] for item in items], ["One.epub", "Two.mobi"])
+
 
 if __name__ == "__main__":
     unittest.main()

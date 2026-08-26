@@ -11,7 +11,7 @@
     <div class="topbar">
       <h1>Библиотека</h1>
       <a class="button primary" href="/catalog">Найти книгу</a>
-      <a class="button" href="/refresh?page={{ page }}">Обновить список</a>
+      <a class="button" href="/refresh?page={{ page }}&q={{ q | urlencode }}&author={{ author | urlencode }}">Обновить список</a>
     </div>
 
     {% if deleted %}
@@ -19,23 +19,60 @@
     {% endif %}
 
     {% if error %}
-      <p class="error">Не удалось получить список книг: {{ error }}</p>
-    {% elif not items %}
+      <p class="error">Яндекс.Диск недоступен: {{ error }}. Локальные книги продолжают работать.</p>
+    {% endif %}
+
+    {% if source_total %}
+      <form class="library-tools" method="get" action="/">
+        <label for="library-query">Поиск по названию или автору</label>
+        <input id="library-query" name="q" type="text" value="{{ q }}" maxlength="120">
+        <label for="library-author">Автор</label>
+        <select id="library-author" name="author">
+          <option value="">Все авторы</option>
+          {% for name, count in authors %}
+            <option value="{{ name }}"{% if author == name %} selected{% endif %}>{{ name }} ({{ count }})</option>
+          {% endfor %}
+        </select>
+        <button type="submit">Показать</button>
+        {% if q or author %}<a class="reset-link" href="/">Сбросить</a>{% endif %}
+      </form>
+    {% endif %}
+
+    {% if enrichment_running %}
+      <p class="notice">Названия, авторы и обложки обрабатываются в фоне. <a href="/?page={{ page }}&q={{ q | urlencode }}&author={{ author | urlencode }}">Проверить готовность</a></p>
+    {% endif %}
+
+    {% if not source_total %}
       <p>Книги не найдены. Проверь путь YANDEX_BOOKS_PATH в .env.</p>
+    {% elif not items %}
+      <p>По выбранному фильтру ничего не найдено.</p>
     {% else %}
-      <p class="library-summary">Всего книг: {{ total_items }} · Страница {{ page }} из {{ total_pages }}</p>
+      <p class="library-summary">Найдено книг: {{ total_items }} · Страница {{ page }} из {{ total_pages }}</p>
       <ul class="book-list">
         {% for item in items %}
           <li class="book-card">
-            <a class="book-name" href="/read?path={{ item.path | urlencode }}">{{ item.name }}</a>
-            <span class="book-date">Добавлена: {{ item.added_at_display }}</span>
-            <div class="book-actions">
-              {% if saved_pages.get(item.path) %}
-                <span class="progress">стр. {{ saved_pages[item.path] }}</span>
-              {% endif %}
-              <a class="download" href="/download?path={{ item.path | urlencode }}">Скачать</a>
-              <a class="download" href="/download?path={{ item.path | urlencode }}&fmt=mobi">Kindle</a>
-              <a class="download danger" href="/delete?path={{ item.path | urlencode }}&page={{ page }}">Удалить</a>
+            <div class="book-cover-wrap">
+              <a href="/read?path={{ item.path | urlencode }}">
+                {% if item.has_cover %}
+                  <img class="book-cover" src="/cover?path={{ item.path | urlencode }}" alt="Обложка книги {{ item.title }}">
+                {% else %}
+                  <span class="book-cover placeholder">{{ item.title[0] | upper }}</span>
+                {% endif %}
+              </a>
+            </div>
+            <div class="book-details">
+              <a class="book-name" href="/read?path={{ item.path | urlencode }}">{{ item.title }}</a>
+              {% if item.author %}<span class="book-author">{{ item.author }}</span>{% endif %}
+              {% if item.title != item.name %}<span class="book-file-name">{{ item.name }}</span>{% endif %}
+              <span class="book-date">Добавлена: {{ item.added_at_display }}</span>
+              <div class="book-actions">
+                {% if saved_pages.get(item.path) %}
+                  <span class="progress">стр. {{ saved_pages[item.path] }}</span>
+                {% endif %}
+                <a class="download" href="/download?path={{ item.path | urlencode }}">Скачать</a>
+                <a class="download" href="/download?path={{ item.path | urlencode }}&fmt=mobi">Kindle</a>
+                <a class="download danger" href="/delete?path={{ item.path | urlencode }}&page={{ page }}&q={{ q | urlencode }}&author={{ author | urlencode }}">Удалить</a>
+              </div>
             </div>
           </li>
         {% endfor %}
@@ -44,7 +81,7 @@
       {% if total_pages > 1 %}
         <nav class="pagination" aria-label="Страницы библиотеки">
           {% if page > 1 %}
-            <a class="page-link" href="/?page={{ page - 1 }}">‹ Назад</a>
+            <a class="page-link" href="/?page={{ page - 1 }}&q={{ q | urlencode }}&author={{ author | urlencode }}">‹ Назад</a>
           {% endif %}
           {% for number in pagination %}
             {% if number is none %}
@@ -52,11 +89,11 @@
             {% elif number == page %}
               <span class="page-link current" aria-current="page">{{ number }}</span>
             {% else %}
-              <a class="page-link" href="/?page={{ number }}">{{ number }}</a>
+              <a class="page-link" href="/?page={{ number }}&q={{ q | urlencode }}&author={{ author | urlencode }}">{{ number }}</a>
             {% endif %}
           {% endfor %}
           {% if page < total_pages %}
-            <a class="page-link" href="/?page={{ page + 1 }}">Вперёд ›</a>
+            <a class="page-link" href="/?page={{ page + 1 }}&q={{ q | urlencode }}&author={{ author | urlencode }}">Вперёд ›</a>
           {% endif %}
         </nav>
       {% endif %}

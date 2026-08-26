@@ -1,6 +1,8 @@
 import asyncio
 import logging
-from urllib.parse import quote
+import zipfile
+import xml.etree.ElementTree as ET
+from urllib.parse import quote, urlencode
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import RedirectResponse, Response
@@ -15,6 +17,7 @@ from . import (
     config,
     convert,
     local_library,
+    metadata,
     progress,
 )
 from .yandex_disk import YandexDiskError
@@ -23,6 +26,8 @@ _MIME_TYPES = {
     ".fb2": "application/x-fictionbook+xml",
     ".zip": "application/zip",
     ".txt": "text/plain; charset=utf-8",
+    ".epub": "application/epub+zip",
+    ".mobi": "application/x-mobipocket-ebook",
 }
 
 FONT_SIZE_COOKIE = "font_size"
@@ -82,6 +87,44 @@ def _book_name(path: str) -> str:
     return path.rsplit("/", 1)[-1]
 
 
+def _library_url(
+    *,
+    page: int = 1,
+    q: str = "",
+    author: str = "",
+    deleted: str = "",
+) -> str:
+    params: dict[str, str | int] = {}
+    if page > 1:
+        params["page"] = page
+    if q:
+        params["q"] = q
+    if author:
+        params["author"] = author
+    if deleted:
+        params["deleted"] = deleted
+    return f"/?{urlencode(params)}" if params else "/"
+
+
+def _enrich_items(items: list[dict]) -> list[dict]:
+    meta_map = metadata.book_metadata.get_all()
+    enriched = []
+    for item in items:
+        meta = meta_map.get(item["path"])
+        enriched.append(
+            {
+                **item,
+                "title": (
+                    (meta.title if meta else None)
+                    or books.title_from_path(item["path"])
+                ),
+                "author": meta.author if meta else None,
+                "has_cover": meta.has_cover if meta else False,
+            }
+        )
+    return enriched
+
+
 @app.get("/login")
 async def login_form(request: Request):
     if auth.is_authenticated(request):
@@ -115,19 +158,48 @@ async def logout():
 
 
 @app.get("/")
-async def library(request: Request, page: int = 1, deleted: str | None = None):
+async def library(
+    request: Request,
+    page: int = 1,
+    q: str = "",
+    author: str = "",
+    deleted: str | None = None,
+):
     if redirect := _require_auth(request):
         return redirect
 
-    error = None
-    items = []
+    error: str | None = None
     try:
         items = await books.get_book_list()
-    except YandexDiskError as exc:
+    except local_library.LocalLibraryError as exc:
         error = str(exc)
+        items = []
+    else:
+        error = books.last_remote_error()
 
-    total_items = len(items)
-    page_items, page, total_pages = _paginate_items(items, page)
+    source_total = len(items)
+    enriched = _enrich_items(items)
+    query = " ".join(q.split()).lower()
+    if query:
+        enriched = [
+            item
+            for item in enriched
+            if query in item["title"].lower()
+            or query in (item["author"] or "").lower()
+            or query in item["name"].lower()
+        ]
+
+    authors: dict[str, int] = {}
+    for item in enriched:
+        if item["author"]:
+            authors[item["author"]] = authors.get(item["author"], 0) + 1
+
+    if author:
+        enriched = [item for item in enriched if item["author"] == author]
+
+    total_items = len(enriched)
+    page_items, page, total_pages = _paginate_items(enriched, page)
+    metadata.book_metadata.kick(page_items)
     saved_pages = progress.get_all()
 
     return templates.TemplateResponse(
@@ -138,24 +210,57 @@ async def library(request: Request, page: int = 1, deleted: str | None = None):
             "error": error,
             "deleted": deleted,
             "saved_pages": saved_pages,
+            "q": q,
+            "author": author,
+            "authors": sorted(authors.items(), key=lambda pair: pair[0].lower()),
             "page": page,
             "total_pages": total_pages,
             "total_items": total_items,
+            "source_total": source_total,
             "pagination": _pagination_window(page, total_pages),
+            "enrichment_running": metadata.book_metadata.is_running(),
         },
     )
 
 
 @app.get("/refresh")
-async def refresh(request: Request, page: int = 1):
+async def refresh(request: Request, page: int = 1, q: str = "", author: str = ""):
     if redirect := _require_auth(request):
         return redirect
     books.invalidate_list_cache()
-    return RedirectResponse(f"/?page={max(1, page)}", status_code=303)
+    return RedirectResponse(
+        _library_url(page=max(1, page), q=q, author=author), status_code=303
+    )
+
+
+@app.get("/cover")
+async def cover(request: Request, path: str):
+    if redirect := _require_auth(request):
+        return redirect
+
+    meta = metadata.book_metadata.get(path)
+    file_path = metadata.book_metadata.cover_path(path)
+    if meta is None or not meta.has_cover or not file_path.is_file():
+        return Response(status_code=404)
+    try:
+        content = await asyncio.to_thread(file_path.read_bytes)
+    except OSError:
+        return Response(status_code=404)
+    return Response(
+        content=content,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
 
 
 @app.get("/delete")
-async def delete_confirm(request: Request, path: str, page: int = 1):
+async def delete_confirm(
+    request: Request,
+    path: str,
+    page: int = 1,
+    q: str = "",
+    author: str = "",
+):
     if redirect := _require_auth(request):
         return redirect
     is_local = path.startswith(local_library.PATH_PREFIX)
@@ -166,6 +271,8 @@ async def delete_confirm(request: Request, path: str, page: int = 1):
             "path": path,
             "name": _book_name(path),
             "page": max(1, page),
+            "q": q,
+            "author": author,
             "is_local": is_local,
             "error": None,
         },
@@ -174,7 +281,11 @@ async def delete_confirm(request: Request, path: str, page: int = 1):
 
 @app.post("/delete")
 async def delete_submit(
-    request: Request, path: str = Form(...), page: int = Form(1)
+    request: Request,
+    path: str = Form(...),
+    page: int = Form(1),
+    q: str = Form(""),
+    author: str = Form(""),
 ):
     if redirect := _require_auth(request):
         return redirect
@@ -183,6 +294,7 @@ async def delete_submit(
     try:
         await books.delete_book(path)
         progress.delete(path)
+        metadata.book_metadata.delete(path)
     except (YandexDiskError, local_library.LocalLibraryError) as exc:
         return templates.TemplateResponse(
             request,
@@ -191,6 +303,8 @@ async def delete_submit(
                 "path": path,
                 "name": name,
                 "page": max(1, page),
+                "q": q,
+                "author": author,
                 "is_local": path.startswith(local_library.PATH_PREFIX),
                 "error": str(exc),
             },
@@ -198,7 +312,10 @@ async def delete_submit(
         )
 
     return RedirectResponse(
-        f"/?page={max(1, page)}&deleted={quote(name)}", status_code=303
+        _library_url(
+            page=max(1, page), q=q, author=author, deleted=name
+        ),
+        status_code=303,
     )
 
 
@@ -331,7 +448,13 @@ async def read(request: Request, path: str, page: int | None = None, fs: int | N
     book = None
     try:
         book = await books.get_book(path)
-    except (YandexDiskError, local_library.LocalLibraryError) as exc:
+    except (
+        YandexDiskError,
+        local_library.LocalLibraryError,
+        convert.ConversionError,
+        zipfile.BadZipFile,
+        ET.ParseError,
+    ) as exc:
         error = str(exc)
 
     if error:

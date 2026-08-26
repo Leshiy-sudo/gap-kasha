@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import config
+from .formats import BOOK_SUFFIXES
 
 PATH_PREFIX = "local:/"
 
@@ -61,7 +62,7 @@ def _list_books() -> list[dict]:
 
     items = []
     for path in paths:
-        if not path.name.lower().endswith((".fb2", ".fb2.zip", ".txt")):
+        if not path.name.lower().endswith(BOOK_SUFFIXES):
             continue
         stat = path.stat()
         items.append(
