@@ -1,5 +1,6 @@
 import os
 import unittest
+from unittest.mock import Mock
 
 os.environ.setdefault("YANDEX_TOKEN", "test-token")
 os.environ.setdefault("SECRET_KEY", "test-secret")
@@ -57,3 +58,18 @@ class LibraryUrlTests(unittest.TestCase):
         self.assertIn("q=%D0%B2%D0%BE%D0%B9%D0%BD%D0%B0", url)
         self.assertIn("author=%D0%9B%D0%B5%D0%B2", url)
         self.assertIn("deleted=%D0%9A%D0%BD%D0%B8%D0%B3%D0%B0.fb2", url)
+
+
+class BrowserModeTests(unittest.TestCase):
+    @staticmethod
+    def request(user_agent: str):
+        request = Mock()
+        request.headers = {"user-agent": user_agent}
+        return request
+
+    def test_detects_kindle_and_silk_browsers(self):
+        self.assertTrue(main._is_kindle(self.request("Mozilla/5.0 Kindle/3.0")))
+        self.assertTrue(main._is_kindle(self.request("Mozilla/5.0 Silk/3.13")))
+
+    def test_uses_modern_mode_for_regular_browser(self):
+        self.assertFalse(main._is_kindle(self.request("Mozilla/5.0 Chrome/140")))

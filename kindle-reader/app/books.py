@@ -1,7 +1,7 @@
 import time
 from datetime import datetime, timedelta, timezone
 
-from . import config, convert, yandex_disk
+from . import config, convert, library_meta, yandex_disk
 from .formats import BOOK_SUFFIXES
 from .paginate import paginate
 from .parsers.fb2 import parse_fb2
@@ -64,6 +64,10 @@ def invalidate_list_cache() -> None:
     _list_cache["items"] = None
 
 
+def invalidate_book_cache(path: str) -> None:
+    _book_cache.pop(path, None)
+
+
 def title_from_path(path: str) -> str:
     name = path.rsplit("/", 1)[-1]
     for suffix in BOOK_SUFFIXES:
@@ -86,8 +90,9 @@ async def get_book(path: str) -> dict:
         fb2_data = await get_fb2_bytes(path, name, data)
         title, paragraphs = parse_fb2(fb2_data)
 
+    override = library_meta.get(path)
     result = {
-        "title": title or title_from_path(path),
+        "title": (override.title if override else None) or title or title_from_path(path),
         "pages": paginate(paragraphs, config.CHARS_PER_PAGE),
     }
     _book_cache[path] = result

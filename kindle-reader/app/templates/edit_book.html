@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Редактировать книгу — {{ title }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,500;0,600;1,500&family=Work+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="/static/style_modern.css?v={{ asset_version('style_modern.css') }}">
+</head>
+<body>
+  <div class="edit-page">
+    <div class="edit-modal">
+      <div class="edit-modal-header">
+        <h1>Редактировать книгу</h1>
+        <a class="edit-close" href="/{% if back %}?{{ back }}{% endif %}" aria-label="Закрыть">&times;</a>
+      </div>
+
+      {% if error %}
+        <div class="notice-bar is-error">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" action="/edit" enctype="multipart/form-data" class="edit-form">
+        <input type="hidden" name="path" value="{{ path }}">
+        <input type="hidden" name="back" value="{{ back }}">
+
+        <div class="edit-form-body">
+          <div class="edit-cover-col">
+            {% if has_preview %}
+              <img class="edit-cover-preview" src="/cover?path={{ path | urlencode }}" alt="">
+            {% else %}
+              <div class="edit-cover-preview edit-cover-placeholder">{{ title[0] | upper }}</div>
+            {% endif %}
+            <label class="dropzone">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 11.5V13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1.5M8 10V2M8 2L5 5M8 2l3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Заменить обложку
+              <input type="file" name="cover" accept="image/*" style="display:none;">
+            </label>
+          </div>
+
+          <div class="edit-fields-col">
+            <div class="field">
+              <label class="field-label">Название</label>
+              <input class="field-input" type="text" name="title" value="{{ title }}" maxlength="300">
+            </div>
+            <div class="field">
+              <label class="field-label">Автор</label>
+              <input class="field-input" type="text" name="author" value="{{ author }}" maxlength="200">
+            </div>
+            <div class="field-row">
+              <div class="field" style="flex:1 1 auto;">
+                <label class="field-label">Серия</label>
+                <input class="field-input" type="text" name="series" value="{{ series }}" maxlength="200">
+              </div>
+              <div class="field" style="flex:0 0 110px;">
+                <label class="field-label">№ в серии</label>
+                <input class="field-input" type="number" name="series_index" min="1" value="{{ series_index if series_index is not none else '' }}">
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label">Статус чтения</label>
+              <div class="seg-control">
+                {% for key, label in status_options %}
+                  <label class="seg-opt">
+                    <input type="radio" name="status" value="{{ key or '' }}" {% if status == key %}checked{% endif %} style="display:none;">
+                    {{ label }}
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="edit-actions">
+          <a class="btn btn-danger-ghost" href="/delete?path={{ path | urlencode }}">Удалить книгу</a>
+          <div class="edit-actions-right">
+            <a class="btn btn-secondary" href="/{% if back %}?{{ back }}{% endif %}">Отмена</a>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+          </div>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</body>
+</html>

@@ -1,10 +1,13 @@
 import asyncio
+import hashlib
 import logging
+import os
 import zipfile
 import xml.etree.ElementTree as ET
+from pathlib import Path
 from urllib.parse import quote, urlencode
 
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -16,6 +19,7 @@ from . import (
     catalog_jobs,
     config,
     convert,
+    library_meta,
     metadata,
     progress,
 )
@@ -40,6 +44,16 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 logger = logging.getLogger("kindle_reader.web")
 _background_tasks: set[asyncio.Task] = set()
+
+
+def _asset_version(filename: str) -> int:
+    try:
+        return int(os.path.getmtime(Path("app/static") / filename))
+    except OSError:
+        return 0
+
+
+templates.env.globals["asset_version"] = _asset_version
 
 
 def _safe_next(path: str) -> str:
@@ -105,21 +119,78 @@ def _library_url(
 
 def _enrich_items(items: list[dict]) -> list[dict]:
     meta_map = metadata.book_metadata.get_all()
+    override_map = library_meta.get_all()
     enriched = []
     for item in items:
         meta = meta_map.get(item["path"])
+        override = override_map.get(item["path"])
         enriched.append(
             {
                 **item,
                 "title": (
+                    (override.title if override else None)
+                    or
                     (meta.title if meta else None)
                     or books.title_from_path(item["path"])
                 ),
-                "author": meta.author if meta else None,
-                "has_cover": meta.has_cover if meta else False,
+                "author": (override.author if override else None)
+                or (meta.author if meta else None),
+                "has_cover": (override.has_custom_cover if override else False)
+                or (meta.has_cover if meta else False),
+                "series": override.series if override else None,
+                "series_index": override.series_index if override else None,
+                "status": override.status if override else None,
             }
         )
     return enriched
+
+
+COVER_PALETTE = [
+    ("#6b2a2a", "#a84a3a"),
+    ("#7a3630", "#b5573f"),
+    ("#2f4858", "#6c91a3"),
+    ("#35502f", "#6f8f57"),
+    ("#3a3350", "#6c5f95"),
+    ("#4a3620", "#8a6a3f"),
+    ("#294a4a", "#4f8080"),
+]
+SIDEBAR_PAGE_SIZE = 10
+_STATUS_OPTIONS = [
+    (key, library_meta.STATUS_LABELS[key])
+    for key in (None, *library_meta.STATUS_CHOICES)
+]
+MAX_COVER_UPLOAD_BYTES = 10 * 1024 * 1024
+
+
+def _cover_gradient(path: str) -> str:
+    digest = hashlib.sha1(path.encode("utf-8")).hexdigest()
+    first, second = COVER_PALETTE[int(digest, 16) % len(COVER_PALETTE)]
+    return f"linear-gradient(160deg, {first}, {second})"
+
+
+def _is_kindle(request: Request) -> bool:
+    user_agent = request.headers.get("user-agent", "").lower()
+    return "kindle" in user_agent or "silk/" in user_agent
+
+
+def _visible_count(pairs: list, shown: int, selected_name: str) -> int:
+    shown = max(shown, SIDEBAR_PAGE_SIZE)
+    if selected_name:
+        index = next(
+            (i for i, (name, _) in enumerate(pairs) if name == selected_name),
+            None,
+        )
+        if index is not None and index >= shown:
+            shown = ((index // SIDEBAR_PAGE_SIZE) + 1) * SIDEBAR_PAGE_SIZE
+    return min(shown, len(pairs))
+
+
+def _back_url(back: str) -> str:
+    return f"/?{back}" if back else "/"
+
+
+async def _known_book_path(path: str) -> bool:
+    return any(item["path"] == path for item in await books.get_book_list())
 
 
 @app.get("/login")
@@ -160,6 +231,11 @@ async def library(
     page: int = 1,
     q: str = "",
     author: str = "",
+    series: str = "",
+    status: str = "",
+    panel: str = "open",
+    authors_shown: int = SIDEBAR_PAGE_SIZE,
+    series_shown: int = SIDEBAR_PAGE_SIZE,
     deleted: str | None = None,
 ):
     if redirect := _require_auth(request):
@@ -167,8 +243,8 @@ async def library(
 
     items = await books.get_book_list()
     error = books.last_remote_error()
-
     source_total = len(items)
+
     enriched = _enrich_items(items)
     query = " ".join(q.split()).lower()
     if query:
@@ -180,22 +256,49 @@ async def library(
             or query in item["name"].lower()
         ]
 
+    all_count = len(enriched)
     authors: dict[str, int] = {}
+    series_counts: dict[str, int] = {}
     for item in enriched:
         if item["author"]:
             authors[item["author"]] = authors.get(item["author"], 0) + 1
+        if item["series"]:
+            series_counts[item["series"]] = series_counts.get(item["series"], 0) + 1
 
-    if author:
+    if series:
+        enriched = [item for item in enriched if item["series"] == series]
+        enriched.sort(
+            key=lambda item: (
+                item["series_index"] is None,
+                item["series_index"] or 0,
+            )
+        )
+    elif author:
         enriched = [item for item in enriched if item["author"] == author]
+    elif status:
+        enriched = [item for item in enriched if item["status"] == status]
 
     total_items = len(enriched)
     page_items, page, total_pages = _paginate_items(enriched, page)
     metadata.book_metadata.kick(page_items)
     saved_pages = progress.get_all()
 
+    kindle = _is_kindle(request)
+    if not kindle:
+        for item in page_items:
+            if not item["has_cover"]:
+                item["cover_gradient"] = _cover_gradient(item["path"])
+
+    authors_sorted = sorted(authors.items(), key=lambda pair: pair[0].lower())
+    series_sorted = sorted(
+        series_counts.items(), key=lambda pair: pair[0].lower()
+    )
+    authors_visible_count = _visible_count(authors_sorted, authors_shown, author)
+    series_visible_count = _visible_count(series_sorted, series_shown, series)
+
     return templates.TemplateResponse(
         request,
-        "library.html",
+        "library.html" if kindle else "library_modern.html",
         {
             "items": page_items,
             "error": error,
@@ -203,25 +306,51 @@ async def library(
             "saved_pages": saved_pages,
             "q": q,
             "author": author,
-            "authors": sorted(authors.items(), key=lambda pair: pair[0].lower()),
+            "series": series,
+            "status": status,
+            "panel_open": panel != "closed",
+            "authors": authors_sorted,
+            "series_list": series_sorted,
+            "authors_visible": authors_sorted[:authors_visible_count],
+            "series_visible": series_sorted[:series_visible_count],
+            "authors_shown": authors_visible_count,
+            "series_shown": series_visible_count,
+            "authors_more": min(
+                SIDEBAR_PAGE_SIZE, len(authors_sorted) - authors_visible_count
+            ),
+            "series_more": min(
+                SIDEBAR_PAGE_SIZE, len(series_sorted) - series_visible_count
+            ),
+            "back_qs": str(request.url.query),
+            "status_options": _STATUS_OPTIONS,
+            "status_labels": library_meta.STATUS_LABELS,
+            "all_count": all_count,
             "page": page,
             "total_pages": total_pages,
             "total_items": total_items,
             "source_total": source_total,
             "pagination": _pagination_window(page, total_pages),
             "enrichment_running": metadata.book_metadata.is_running(),
+            "auto_refresh": metadata.book_metadata.is_running() and not kindle,
         },
     )
 
 
 @app.get("/refresh")
-async def refresh(request: Request, page: int = 1, q: str = "", author: str = ""):
+async def refresh(
+    request: Request,
+    page: int = 1,
+    q: str = "",
+    author: str = "",
+    back: str = "",
+):
     if redirect := _require_auth(request):
         return redirect
     books.invalidate_list_cache()
-    return RedirectResponse(
-        _library_url(page=max(1, page), q=q, author=author), status_code=303
+    target = _back_url(back) if back else _library_url(
+        page=max(1, page), q=q, author=author
     )
+    return RedirectResponse(target, status_code=303)
 
 
 @app.get("/cover")
@@ -229,9 +358,13 @@ async def cover(request: Request, path: str):
     if redirect := _require_auth(request):
         return redirect
 
-    meta = metadata.book_metadata.get(path)
-    file_path = metadata.book_metadata.cover_path(path)
-    if meta is None or not meta.has_cover or not file_path.is_file():
+    file_path = library_meta.custom_cover_path(path)
+    if not file_path.is_file():
+        meta = metadata.book_metadata.get(path)
+        file_path = metadata.book_metadata.cover_path(path)
+        if meta is None or not meta.has_cover or not file_path.is_file():
+            return Response(status_code=404)
+    if not file_path.is_file():
         return Response(status_code=404)
     try:
         content = await asyncio.to_thread(file_path.read_bytes)
@@ -242,6 +375,92 @@ async def cover(request: Request, path: str):
         media_type="image/jpeg",
         headers={"Cache-Control": "private, max-age=3600"},
     )
+
+
+def _edit_context(path: str, back: str) -> dict:
+    meta = metadata.book_metadata.get(path)
+    override = library_meta.get(path)
+    return {
+        "path": path,
+        "back": back,
+        "title": (override.title if override else None)
+        or (meta.title if meta else None)
+        or books.title_from_path(path),
+        "author": (override.author if override else None)
+        or (meta.author if meta else None)
+        or "",
+        "series": (override.series if override else None) or "",
+        "series_index": override.series_index if override else None,
+        "status": override.status if override else None,
+        "status_options": _STATUS_OPTIONS,
+        "has_preview": (override.has_custom_cover if override else False)
+        or (meta.has_cover if meta else False),
+    }
+
+
+@app.get("/edit")
+async def edit_form(request: Request, path: str, back: str = ""):
+    if redirect := _require_auth(request):
+        return redirect
+    if not await _known_book_path(path):
+        return Response("Книга не найдена", status_code=404)
+    return templates.TemplateResponse(
+        request,
+        "edit_book.html",
+        {"error": None, **_edit_context(path, back)},
+    )
+
+
+@app.post("/edit")
+async def edit_submit(
+    request: Request,
+    path: str = Form(...),
+    title: str = Form(""),
+    author: str = Form(""),
+    series: str = Form(""),
+    series_index: str = Form(""),
+    status: str = Form(""),
+    back: str = Form(""),
+    cover: UploadFile | None = File(None),
+):
+    if redirect := _require_auth(request):
+        return redirect
+    if not await _known_book_path(path):
+        return Response("Книга не найдена", status_code=404)
+
+    parsed_index: int | None = None
+    if series.strip() and series_index.strip():
+        try:
+            parsed_index = max(1, int(series_index.strip()))
+        except ValueError:
+            parsed_index = None
+
+    status_value = status if status in library_meta.STATUS_CHOICES else None
+    library_meta.set_override(
+        path,
+        title=title.strip() or None,
+        author=author.strip() or None,
+        series=series.strip() or None,
+        series_index=parsed_index,
+        status=status_value,
+    )
+
+    cover_error = None
+    if cover is not None and cover.filename:
+        data = await cover.read(MAX_COVER_UPLOAD_BYTES + 1)
+        if len(data) > MAX_COVER_UPLOAD_BYTES:
+            cover_error = "Файл обложки больше 10 МБ — выберите файл поменьше"
+        elif data and not library_meta.save_custom_cover(path, data):
+            cover_error = "Не удалось сохранить обложку — файл не похож на картинку"
+
+    books.invalidate_book_cache(path)
+    if cover_error:
+        return templates.TemplateResponse(
+            request,
+            "edit_book.html",
+            {"error": cover_error, **_edit_context(path, back)},
+        )
+    return RedirectResponse(_back_url(back), status_code=303)
 
 
 @app.get("/delete")
@@ -285,6 +504,7 @@ async def delete_submit(
         await books.delete_book(path)
         progress.delete(path)
         metadata.book_metadata.delete(path)
+        library_meta.delete_override(path)
     except YandexDiskError as exc:
         return templates.TemplateResponse(
             request,
