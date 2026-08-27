@@ -46,8 +46,9 @@ _telegram_session_value = os.environ.get(
 TELEGRAM_SESSION_PATH = Path(_telegram_session_value)
 if not TELEGRAM_SESSION_PATH.is_absolute():
     TELEGRAM_SESSION_PATH = PROJECT_DIR / TELEGRAM_SESSION_PATH
+DEFAULT_TELEGRAM_SOURCE_BOT = "flibustafreebookbot"
 TELEGRAM_SOURCE_BOT = os.environ.get(
-    "TELEGRAM_SOURCE_BOT", ""
+    "TELEGRAM_SOURCE_BOT", DEFAULT_TELEGRAM_SOURCE_BOT
 ).strip().lstrip("@")
 TELEGRAM_CATALOG_TIMEOUT_SECONDS = int(
     os.environ.get("TELEGRAM_CATALOG_TIMEOUT_SECONDS", "25")
