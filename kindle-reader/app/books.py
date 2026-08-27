@@ -1,7 +1,7 @@
 import time
 from datetime import datetime, timedelta, timezone
 
-from . import config, convert, local_library, yandex_disk
+from . import config, convert, yandex_disk
 from .formats import BOOK_SUFFIXES
 from .paginate import paginate
 from .parsers.fb2 import parse_fb2
@@ -35,13 +35,15 @@ async def get_book_list() -> list[dict]:
     if _list_cache["items"] is None or now - _list_cache["ts"] > LIST_TTL_SECONDS:
         try:
             remote_items = await yandex_disk.list_books()
-            _last_remote_error = None
         except YandexDiskError as exc:
-            remote_items = []
             _last_remote_error = str(exc)
-        local_items = await local_library.list_books()
+            return _list_cache["items"] or []
+        except Exception:
+            _last_remote_error = "Яндекс.Диск временно недоступен"
+            return _list_cache["items"] or []
+        _last_remote_error = None
         items = []
-        for original in remote_items + local_items:
+        for original in remote_items:
             item = dict(original)
             item["added_at_display"] = format_added_at(
                 item.get("created") or item.get("modified")
@@ -107,16 +109,11 @@ async def get_fb2_bytes(path: str, name: str, data: bytes) -> bytes:
 
 
 async def download_book(path: str) -> bytes:
-    if path.startswith(local_library.PATH_PREFIX):
-        return await local_library.download_book(path)
     return await yandex_disk.download_book(path)
 
 
 async def delete_book(path: str) -> None:
-    if path.startswith(local_library.PATH_PREFIX):
-        await local_library.delete_book(path)
-    else:
-        await yandex_disk.delete_book(path)
+    await yandex_disk.delete_book(path)
     _book_cache.pop(path, None)
     _fb2_conversion_cache.pop(path, None)
     invalidate_list_cache()

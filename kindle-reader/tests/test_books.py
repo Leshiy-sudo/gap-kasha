@@ -26,7 +26,7 @@ class GetBookFormatRoutingTests(unittest.IsolatedAsyncioTestCase):
             ) as conversion,
             patch.object(books, "parse_fb2", parse),
         ):
-            result = await books.get_book("local:/Book.epub")
+            result = await books.get_book("disk:/Книги/Book.epub")
 
         conversion.assert_awaited_once_with(b"epub", "Book.epub")
         parse.assert_called_once_with(b"<FictionBook/>")
@@ -35,8 +35,8 @@ class GetBookFormatRoutingTests(unittest.IsolatedAsyncioTestCase):
     async def test_conversion_result_is_cached(self):
         conversion = AsyncMock(return_value=b"<FictionBook/>")
         with patch.object(books.convert, "convert_to_fb2", conversion):
-            first = await books.get_fb2_bytes("local:/B.mobi", "B.mobi", b"one")
-            second = await books.get_fb2_bytes("local:/B.mobi", "B.mobi", b"one")
+            first = await books.get_fb2_bytes("disk:/Книги/B.mobi", "B.mobi", b"one")
+            second = await books.get_fb2_bytes("disk:/Книги/B.mobi", "B.mobi", b"one")
 
         conversion.assert_awaited_once()
         self.assertEqual(first, second)
@@ -49,7 +49,7 @@ class GetBookFormatRoutingTests(unittest.IsolatedAsyncioTestCase):
             patch.object(books.convert, "convert_to_fb2", conversion),
             patch.object(books, "parse_fb2", parse),
         ):
-            await books.get_book("local:/Book.fb2")
+            await books.get_book("disk:/Книги/Book.fb2")
 
         conversion.assert_not_awaited()
         parse.assert_called_once_with(b"fb2")
@@ -59,24 +59,19 @@ class LibraryFailoverTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         books._list_cache = {"items": None, "ts": 0.0}
 
-    async def test_yandex_failure_keeps_local_books_and_dates(self):
-        local_item = {
-            "path": "local:/Book.fb2",
+    async def test_yandex_failure_keeps_last_successful_list(self):
+        cached_item = {
+            "path": "disk:/Книги/Book.fb2",
             "name": "Book.fb2",
             "size": 4,
             "created": "2026-08-25T11:30:00+00:00",
+            "added_at_display": "25.08.2026 16:30",
         }
-        with (
-            patch.object(
-                books.yandex_disk,
-                "list_books",
-                AsyncMock(side_effect=yandex_disk.YandexDiskError("403")),
-            ),
-            patch.object(
-                books.local_library,
-                "list_books",
-                AsyncMock(return_value=[local_item]),
-            ),
+        books._list_cache = {"items": [cached_item], "ts": 0.0}
+        with patch.object(
+            books.yandex_disk,
+            "list_books",
+            AsyncMock(side_effect=yandex_disk.YandexDiskError("403")),
         ):
             items = await books.get_book_list()
 

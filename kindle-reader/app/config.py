@@ -47,7 +47,7 @@ TELEGRAM_SESSION_PATH = Path(_telegram_session_value)
 if not TELEGRAM_SESSION_PATH.is_absolute():
     TELEGRAM_SESSION_PATH = PROJECT_DIR / TELEGRAM_SESSION_PATH
 TELEGRAM_SOURCE_BOT = os.environ.get(
-    "TELEGRAM_SOURCE_BOT", "flibustafreebookbot"
+    "TELEGRAM_SOURCE_BOT", ""
 ).strip().lstrip("@")
 TELEGRAM_CATALOG_TIMEOUT_SECONDS = int(
     os.environ.get("TELEGRAM_CATALOG_TIMEOUT_SECONDS", "25")
@@ -55,10 +55,6 @@ TELEGRAM_CATALOG_TIMEOUT_SECONDS = int(
 TELEGRAM_ACTION_MAX_AGE_SECONDS = int(
     os.environ.get("TELEGRAM_ACTION_MAX_AGE_SECONDS", "600")
 )
-_local_books_value = os.environ.get("LOCAL_BOOKS_PATH", "data/imported_books")
-LOCAL_BOOKS_PATH = Path(_local_books_value)
-if not LOCAL_BOOKS_PATH.is_absolute():
-    LOCAL_BOOKS_PATH = PROJECT_DIR / LOCAL_BOOKS_PATH
 _catalog_jobs_value = os.environ.get("CATALOG_JOBS_PATH", "data/catalog_jobs")
 CATALOG_JOBS_PATH = Path(_catalog_jobs_value)
 if not CATALOG_JOBS_PATH.is_absolute():

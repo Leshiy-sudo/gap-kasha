@@ -12,7 +12,7 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from telethon import TelegramClient
 from telethon.errors import RPCError
 
-from . import config, local_library
+from . import config, yandex_disk
 from .formats import FORMAT_KEYWORDS as _SUPPORTED_FORMATS
 from .telegram_bot import normalize_book_filename
 
@@ -323,13 +323,13 @@ class TelegramCatalog:
                     if len(data) > config.TELEGRAM_MAX_FILE_SIZE_BYTES:
                         raise CatalogError("Полученная книга слишком большая")
                     try:
-                        await local_library.save_book(data, safe_name)
-                    except local_library.LocalLibraryConflictError:
+                        await yandex_disk.upload_book(data, safe_name)
+                    except yandex_disk.YandexDiskConflictError:
                         existing_names.append(safe_name)
-                    except local_library.LocalLibraryError:
-                        logger.exception("Failed to save catalog document")
+                    except yandex_disk.YandexDiskError:
+                        logger.exception("Failed to upload catalog document")
                         raise CatalogError(
-                            "Не удалось сохранить книгу в библиотеку"
+                            "Не удалось загрузить книгу на Яндекс.Диск"
                         ) from None
                     else:
                         imported_names.append(safe_name)

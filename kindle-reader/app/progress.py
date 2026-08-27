@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 _DB_PATH = Path(__file__).resolve().parent.parent / "data" / "progress.db"
@@ -18,7 +19,7 @@ def _connect() -> sqlite3.Connection:
 
 
 def get_page(book_path: str) -> int | None:
-    with _connect() as conn:
+    with closing(_connect()) as conn, conn:
         row = conn.execute(
             "SELECT page FROM progress WHERE book_path = ?", (book_path,)
         ).fetchone()
@@ -26,7 +27,7 @@ def get_page(book_path: str) -> int | None:
 
 
 def set_page(book_path: str, page: int) -> None:
-    with _connect() as conn:
+    with closing(_connect()) as conn, conn:
         conn.execute(
             "INSERT INTO progress (book_path, page, updated_at) "
             "VALUES (?, ?, datetime('now')) "
@@ -37,11 +38,11 @@ def set_page(book_path: str, page: int) -> None:
 
 
 def get_all() -> dict[str, int]:
-    with _connect() as conn:
+    with closing(_connect()) as conn, conn:
         rows = conn.execute("SELECT book_path, page FROM progress").fetchall()
     return dict(rows)
 
 
 def delete(book_path: str) -> None:
-    with _connect() as conn:
+    with closing(_connect()) as conn, conn:
         conn.execute("DELETE FROM progress WHERE book_path = ?", (book_path,))

@@ -16,7 +16,6 @@ from . import (
     catalog_jobs,
     config,
     convert,
-    local_library,
     metadata,
     progress,
 )
@@ -82,8 +81,6 @@ def _pagination_window(page: int, total_pages: int) -> list[int | None]:
 
 
 def _book_name(path: str) -> str:
-    if path.startswith(local_library.PATH_PREFIX):
-        return path[len(local_library.PATH_PREFIX) :]
     return path.rsplit("/", 1)[-1]
 
 
@@ -168,14 +165,8 @@ async def library(
     if redirect := _require_auth(request):
         return redirect
 
-    error: str | None = None
-    try:
-        items = await books.get_book_list()
-    except local_library.LocalLibraryError as exc:
-        error = str(exc)
-        items = []
-    else:
-        error = books.last_remote_error()
+    items = await books.get_book_list()
+    error = books.last_remote_error()
 
     source_total = len(items)
     enriched = _enrich_items(items)
@@ -263,7 +254,6 @@ async def delete_confirm(
 ):
     if redirect := _require_auth(request):
         return redirect
-    is_local = path.startswith(local_library.PATH_PREFIX)
     return templates.TemplateResponse(
         request,
         "delete.html",
@@ -273,7 +263,7 @@ async def delete_confirm(
             "page": max(1, page),
             "q": q,
             "author": author,
-            "is_local": is_local,
+            "is_local": False,
             "error": None,
         },
     )
@@ -295,7 +285,7 @@ async def delete_submit(
         await books.delete_book(path)
         progress.delete(path)
         metadata.book_metadata.delete(path)
-    except (YandexDiskError, local_library.LocalLibraryError) as exc:
+    except YandexDiskError as exc:
         return templates.TemplateResponse(
             request,
             "delete.html",
@@ -305,7 +295,7 @@ async def delete_submit(
                 "page": max(1, page),
                 "q": q,
                 "author": author,
-                "is_local": path.startswith(local_library.PATH_PREFIX),
+                "is_local": False,
                 "error": str(exc),
             },
             status_code=502,
@@ -407,7 +397,7 @@ async def download(request: Request, path: str, fmt: str | None = None):
 
     try:
         data = await books.download_book(path)
-    except (YandexDiskError, local_library.LocalLibraryError) as exc:
+    except YandexDiskError as exc:
         return Response(f"Не удалось скачать файл: {exc}", status_code=502)
 
     name = path.rsplit("/", 1)[-1]
@@ -450,7 +440,6 @@ async def read(request: Request, path: str, page: int | None = None, fs: int | N
         book = await books.get_book(path)
     except (
         YandexDiskError,
-        local_library.LocalLibraryError,
         convert.ConversionError,
         zipfile.BadZipFile,
         ET.ParseError,
