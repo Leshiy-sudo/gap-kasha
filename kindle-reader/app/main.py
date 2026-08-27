@@ -197,19 +197,29 @@ async def _known_book_path(path: str) -> bool:
 async def login_form(request: Request):
     if auth.is_authenticated(request):
         return RedirectResponse("/", status_code=303)
-    return templates.TemplateResponse(request, "login.html", {"error": None})
+    return templates.TemplateResponse(
+        request, "login.html", {"error": None, "users": auth.user_choices()}
+    )
 
 
 @app.post("/login")
-async def login_submit(request: Request, password: str = Form(...), next: str = Form("/")):
-    if not auth.verify_password(password):
+async def login_submit(
+    request: Request,
+    user_id: str = Form(...),
+    password: str = Form(...),
+    next: str = Form("/"),
+):
+    if not auth.verify_password(user_id, password):
         return templates.TemplateResponse(
-            request, "login.html", {"error": "Неверный пароль"}, status_code=401
+            request,
+            "login.html",
+            {"error": "Неверный пароль", "users": auth.user_choices(), "selected_user": user_id},
+            status_code=401,
         )
     response = RedirectResponse(_safe_next(next), status_code=303)
     response.set_cookie(
         auth.COOKIE_NAME,
-        auth.make_session_cookie(),
+        auth.make_session_cookie(user_id),
         httponly=True,
         samesite="lax",
         secure=config.COOKIE_SECURE,
@@ -281,7 +291,8 @@ async def library(
     total_items = len(enriched)
     page_items, page, total_pages = _paginate_items(enriched, page)
     metadata.book_metadata.kick(page_items)
-    saved_pages = progress.get_all()
+    user_id = auth.current_user_id(request)
+    saved_pages = progress.get_all(user_id)
 
     kindle = _is_kindle(request)
     if not kindle:
@@ -304,6 +315,7 @@ async def library(
             "error": error,
             "deleted": deleted,
             "saved_pages": saved_pages,
+            "current_user_name": auth.current_user_name(request),
             "q": q,
             "author": author,
             "series": series,
@@ -670,10 +682,11 @@ async def read(request: Request, path: str, page: int | None = None, fs: int | N
         return templates.TemplateResponse(request, "reader.html", {"error": error})
 
     total = len(book["pages"])
+    user_id = auth.current_user_id(request)
     if page is None:
-        page = progress.get_page(path) or 1
+        page = progress.get_page(user_id, path) or 1
     page = max(1, min(page, total))
-    progress.set_page(path, page)
+    progress.set_page(user_id, path, page)
 
     cookie_fs = request.cookies.get(FONT_SIZE_COOKIE)
     font_size = fs if fs is not None else int(cookie_fs) if cookie_fs else DEFAULT_FONT_SIZE

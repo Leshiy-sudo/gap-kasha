@@ -11,6 +11,8 @@ YANDEX_BOOKS_PATH = os.environ.get("YANDEX_BOOKS_PATH", "/Книги")
 SECRET_KEY = os.environ["SECRET_KEY"]
 PASSWORD_HASH = os.environ["PASSWORD_HASH"]
 PASSWORD_SALT = os.environ["PASSWORD_SALT"]
+AUTH_USERS_JSON = os.environ.get("AUTH_USERS_JSON", "").strip()
+DEFAULT_USER_ID = os.environ.get("DEFAULT_USER_ID", "talgat").strip() or "talgat"
 CHARS_PER_PAGE = int(os.environ.get("CHARS_PER_PAGE", "1600"))
 
 
