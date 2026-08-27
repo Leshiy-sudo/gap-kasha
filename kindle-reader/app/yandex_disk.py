@@ -106,6 +106,10 @@ async def upload_book(data: bytes, name: str, *, overwrite: bool = False) -> str
         )
         if resp.status_code == 409:
             raise YandexDiskConflictError("Файл с таким именем уже существует")
+        if resp.status_code == 403:
+            raise YandexDiskError(
+                "Яндекс.Диск запретил загрузку: у OAuth-токена нет права записи"
+            )
         if resp.status_code != 200:
             raise YandexDiskError(
                 f"Не удалось получить ссылку загрузки: {resp.status_code}"

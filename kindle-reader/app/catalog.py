@@ -326,11 +326,9 @@ class TelegramCatalog:
                         await yandex_disk.upload_book(data, safe_name)
                     except yandex_disk.YandexDiskConflictError:
                         existing_names.append(safe_name)
-                    except yandex_disk.YandexDiskError:
+                    except yandex_disk.YandexDiskError as exc:
                         logger.exception("Failed to upload catalog document")
-                        raise CatalogError(
-                            "Не удалось загрузить книгу на Яндекс.Диск"
-                        ) from None
+                        raise CatalogError(str(exc)) from None
                     else:
                         imported_names.append(safe_name)
 

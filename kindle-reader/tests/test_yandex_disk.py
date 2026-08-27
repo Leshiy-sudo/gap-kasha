@@ -78,6 +78,13 @@ class UploadBookTests(unittest.IsolatedAsyncioTestCase):
                 await yandex_disk.upload_book(b"book-data", "book.fb2")
         self.assertEqual(client.put_calls, [])
 
+    async def test_reports_missing_write_permission(self):
+        client = FakeAsyncClient(FakeResponse(403))
+        with patch.object(yandex_disk.httpx, "AsyncClient", return_value=client):
+            with self.assertRaisesRegex(yandex_disk.YandexDiskError, "права записи"):
+                await yandex_disk.upload_book(b"book-data", "book.fb2")
+        self.assertEqual(client.put_calls, [])
+
 
 class ListBooksTests(unittest.IsolatedAsyncioTestCase):
     async def test_requests_added_date_fields(self):

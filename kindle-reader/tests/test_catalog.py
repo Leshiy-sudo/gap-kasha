@@ -249,11 +249,15 @@ class CatalogOutcomeTests(unittest.IsolatedAsyncioTestCase):
     async def test_reports_storage_failure_as_catalog_error(self):
         service = catalog.TelegramCatalog()
         message = FakeMessage(91, filename="Book.fb2")
-        upload = AsyncMock(side_effect=yandex_disk.YandexDiskError("failure"))
+        upload = AsyncMock(
+            side_effect=yandex_disk.YandexDiskError(
+                "Яндекс.Диск запретил загрузку: у OAuth-токена нет права записи"
+            )
+        )
 
         with (
             patch.object(yandex_disk, "upload_book", upload),
-            self.assertRaisesRegex(catalog.CatalogError, "Яндекс.Диск"),
+            self.assertRaisesRegex(catalog.CatalogError, "права записи"),
         ):
             await service._build_outcome(
                 FakeClient(), [message], import_documents=True
