@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -15,28 +16,25 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.KeyboardType
 import com.gapkassa.R
-import com.gapkassa.auth.GoogleAuthException
-import com.gapkassa.auth.GoogleAuthManager
 import com.gapkassa.auth.TestIdentities
-import com.gapkassa.auth.findActivity
 import com.gapkassa.ui.TestTags
 import com.gapkassa.ui.components.AppCard
-import com.gapkassa.ui.components.GoogleSignInButton
+import com.gapkassa.ui.components.AppOutlinedTextField
+import com.gapkassa.ui.components.PrimaryButton
 import com.gapkassa.ui.components.StatusChip
 import com.gapkassa.ui.components.TertiaryButton
 import com.gapkassa.ui.theme.FintechColors
 import com.gapkassa.ui.theme.FintechSpacing
 import com.gapkassa.viewmodel.AuthViewModel
-import kotlinx.coroutines.launch
 
 @Composable
 fun AuthScreen(
@@ -44,17 +42,8 @@ fun AuthScreen(
     onLoggedIn: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val authManager = remember(context) { GoogleAuthManager(context) }
-
-    fun handleFailure(error: Throwable) {
-        if (error is GoogleAuthException) {
-            viewModel.onGoogleProviderError(error.code)
-        } else {
-            viewModel.onGoogleProviderError("google_auth_failed")
-        }
-    }
+    var phoneInput by remember { mutableStateOf("+998") }
+    var codeInput by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -83,25 +72,25 @@ fun AuthScreen(
         AppCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(FintechSpacing.lg)) {
                 Text(
-                    text = stringResource(R.string.auth_google_card_title),
+                    text = stringResource(R.string.auth_telegram_card_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.xs))
                 Text(
-                    text = stringResource(R.string.auth_google_card_body),
+                    text = stringResource(R.string.auth_telegram_card_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.sm))
                 Row(horizontalArrangement = Arrangement.spacedBy(FintechSpacing.xs)) {
                     StatusChip(
-                        text = stringResource(R.string.auth_google_chip_trusted),
+                        text = stringResource(R.string.auth_telegram_chip_trusted),
                         background = FintechColors.SuccessSoft,
                         contentColor = FintechColors.Success
                     )
                     StatusChip(
-                        text = stringResource(R.string.auth_google_chip_passwordless),
+                        text = stringResource(R.string.auth_telegram_chip_no_password),
                         background = FintechColors.InfoSoft,
                         contentColor = FintechColors.Info
                     )
@@ -111,56 +100,64 @@ fun AuthScreen(
 
         androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.xxl))
 
-        if (!state.isGoogleConfigured) {
+        AppOutlinedTextField(
+            value = phoneInput,
+            onValueChange = { phoneInput = it },
+            label = stringResource(R.string.field_phone),
+            readOnly = state.codeSent,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            modifier = Modifier.fillMaxWidth().testTag(TestTags.AuthPhoneField)
+        )
+
+        if (state.codeSent) {
+            androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.sm))
             Text(
-                text = stringResource(R.string.auth_google_config_hint),
+                text = stringResource(R.string.message_verification_sent),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.sm))
+            AppOutlinedTextField(
+                value = codeInput,
+                onValueChange = { codeInput = it },
+                label = stringResource(R.string.field_verification_code),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                modifier = Modifier.fillMaxWidth().testTag(TestTags.AuthCodeField)
+            )
             androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.md))
+            PrimaryButton(
+                text = stringResource(R.string.action_verify),
+                enabled = !state.isLoading,
+                modifier = Modifier.testTag(TestTags.AuthVerifyButton),
+                onClick = { viewModel.verifyCode(codeInput, onLoggedIn) }
+            )
+        } else {
+            androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.md))
+            PrimaryButton(
+                text = stringResource(R.string.action_send_code),
+                enabled = !state.isLoading,
+                modifier = Modifier.testTag(TestTags.AuthSendCodeButton),
+                onClick = { viewModel.startPhoneAuth(phoneInput) }
+            )
         }
 
-        GoogleSignInButton(
-            text = stringResource(R.string.action_continue_with_google),
-            enabled = !state.isLoading,
-            modifier = Modifier.testTag(TestTags.AuthGoogleButton),
-            onClick = {
-                val activity = context.findActivity() ?: return@GoogleSignInButton
-                scope.launch {
-                    try {
-                        val token = authManager.requestGoogleToken(activity)
-                        viewModel.loginWithGoogle(token.idToken, token.nonce, onLoggedIn)
-                    } catch (error: GoogleAuthException) {
-                        handleFailure(error)
-                    }
-                }
-            }
-        )
-
-        if (state.isMockGoogleAvailable) {
+        if (state.isMockAvailable) {
             androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.md))
             TestIdentities.ALL.forEachIndexed { index, identity ->
                 if (index > 0) {
                     androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.xs))
                 }
-                val tag = if (index == 0) TestTags.AuthMockGoogleButton else "${TestTags.AuthMockGoogleButton}_$index"
+                val tag = if (index == 0) TestTags.AuthMockButton else "${TestTags.AuthMockButton}_$index"
                 TertiaryButton(
                     text = identity.displayName,
                     enabled = !state.isLoading,
                     modifier = Modifier.testTag(tag),
-                    onClick = {
-                        try {
-                            val token = authManager.buildMockGoogleToken(identity)
-                            viewModel.loginWithGoogle(token.idToken, token.nonce, onLoggedIn)
-                        } catch (error: GoogleAuthException) {
-                            handleFailure(error)
-                        }
-                    }
+                    onClick = { viewModel.loginAsTestIdentity(identity.phone, onLoggedIn) }
                 )
             }
             androidx.compose.foundation.layout.Spacer(Modifier.height(FintechSpacing.sm))
             Text(
-                text = stringResource(R.string.auth_google_mock_hint),
+                text = stringResource(R.string.auth_mock_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

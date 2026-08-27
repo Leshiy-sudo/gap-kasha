@@ -77,7 +77,7 @@ def delete_user_account(
 ):
     user = dict(user_row)
     user_id = user["id"]
-    email = user["email"]
+    phone = user["phone"]
 
     created_rooms = [
         row["id"]
@@ -115,9 +115,8 @@ def delete_user_account(
 
     conn.execute("DELETE FROM refresh_tokens WHERE user_id = ?", (user_id,))
     conn.execute("DELETE FROM device_tokens WHERE user_id = ?", (user_id,))
-    conn.execute("DELETE FROM otp_codes WHERE email = ?", (email,))
-    conn.execute("DELETE FROM login_attempts WHERE email = ?", (email,))
-    conn.execute("DELETE FROM email_outbox WHERE recipient = ?", (email,))
+    conn.execute("DELETE FROM phone_otp_codes WHERE phone = ?", (phone,))
+    conn.execute("DELETE FROM login_attempts WHERE phone = ?", (phone,))
     conn.execute(
         "DELETE FROM audit_log WHERE actor_id = ? OR (entity_type = 'user' AND entity_id = ?)",
         (user_id, user_id),

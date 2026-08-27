@@ -12,17 +12,11 @@ interface BackendApi {
     @GET("app/config")
     suspend fun appConfig(@Query("lang") language: String): AppConfigResponse
 
-    @POST("auth/request-otp")
-    suspend fun requestRegisterOtp(@Body request: RegisterRequest): MessageResponse
+    @POST("auth/phone/start")
+    suspend fun startPhoneAuth(@Body request: PhoneAuthStartRequest): MessageResponse
 
-    @POST("auth/verify-otp")
-    suspend fun verifyRegisterOtp(@Body request: RegisterVerifyRequest): AuthResponse
-
-    @POST("auth/login")
-    suspend fun login(@Body request: LoginRequest): AuthResponse
-
-    @POST("auth/google")
-    suspend fun googleAuth(@Body request: GoogleAuthRequest): AuthResponse
+    @POST("auth/phone/verify")
+    suspend fun verifyPhoneAuth(@Body request: PhoneAuthVerifyRequest): AuthResponse
 
     @POST("auth/refresh")
     suspend fun refresh(@Body request: RefreshRequest): AuthResponse

@@ -10,6 +10,7 @@ import com.gapkassa.data.repository.AuthRepository
 import com.gapkassa.data.repository.RoomRepository
 import com.gapkassa.data.repository.RoomDeleteError
 import com.gapkassa.data.repository.RoomDeleteException
+import com.gapkassa.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -24,11 +25,22 @@ import java.util.UUID
 class RoomsViewModel(
     private val roomRepository: RoomRepository,
     private val actionLogRepository: ActionLogRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _isCreating = MutableStateFlow(false)
     val isCreating: StateFlow<Boolean> = _isCreating
+
+    val language: StateFlow<String> = settingsRepository.languageFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "ru")
+
+    fun toggleLanguage() {
+        viewModelScope.launch {
+            val next = if (language.value == "ru") "uz" else "ru"
+            settingsRepository.setLanguage(next)
+        }
+    }
 
     val rooms: StateFlow<List<RoomItem>> = roomRepository.observeRoomsWithCounts()
         .map { list ->
@@ -45,8 +57,8 @@ class RoomsViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val currentEmail: String?
-        get() = authRepository.currentEmail
+    val currentPhone: String?
+        get() = authRepository.currentPhone
 
     init {
         refreshRooms()
@@ -65,13 +77,13 @@ class RoomsViewModel(
         paymentDay: Int,
         cycleLength: Int,
         autoRotate: Boolean,
-        participantEmails: List<String>,
+        participantPhones: List<String>,
         onCreated: (String) -> Unit
     ) {
         if (BuildConfig.DEBUG) {
-            Log.d("RoomsViewModel", "createRoom click name=\"$name\" participants=${participantEmails.size}")
+            Log.d("RoomsViewModel", "createRoom click name=\"$name\" participants=${participantPhones.size}")
         }
-        if (participantEmails.size < 5 || participantEmails.size > 20) {
+        if (participantPhones.size < 5 || participantPhones.size > 20) {
             if (BuildConfig.DEBUG) {
                 Log.d("RoomsViewModel", "createRoom blocked: participants size invalid")
             }
@@ -84,16 +96,16 @@ class RoomsViewModel(
                 if (BuildConfig.DEBUG) {
                     Log.d("RoomsViewModel", "createRoom sending request")
                 }
-                val users = participantEmails.map { email ->
+                val users = participantPhones.map { phone ->
                     UserEntity(
-                        id = email.trim().lowercase(),
+                        id = phone.trim(),
                         name = "",
-                        email = email.trim().lowercase()
+                        phone = phone.trim()
                     )
                 }
-                val currentEmail = authRepository.currentEmail?.trim()?.lowercase()
-                val adminId = if (currentEmail != null && users.any { it.id == currentEmail }) {
-                    currentEmail
+                val currentPhone = authRepository.currentPhone?.trim()
+                val adminId = if (currentPhone != null && users.any { it.id == currentPhone }) {
+                    currentPhone
                 } else {
                     users.first().id
                 }

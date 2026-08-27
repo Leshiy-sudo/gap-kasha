@@ -20,7 +20,7 @@ enum class PaymentStatus {
 data class User(
     val id: String,
     val name: String,
-    val email: String
+    val phone: String
 )
 
 /** Domain model for room configuration. */
@@ -61,7 +61,6 @@ data class UserProfile(
     val name: String,
     val lastName: String,
     val patronymic: String,
-    val email: String,
     val phone: String,
     val photoUrl: String
 )

@@ -1,34 +1,37 @@
 import os
 import re
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from account_service import delete_user_account
-from db import db_session
-from security import verify_password
+from db import db_session, now_iso
+from security import verify_otp as verify_otp_code
 
 APP_NAME = os.getenv("APP_PUBLIC_NAME", "GapKassa")
 LEGAL_ENTITY = os.getenv("LEGAL_ENTITY_NAME", "GapKassa")
 SUPPORT_EMAIL = os.getenv("PUBLIC_SUPPORT_EMAIL", "support@gapkassa.local")
 PRIVACY_EFFECTIVE_DATE = os.getenv("PRIVACY_EFFECTIVE_DATE", "2026-04-16")
 
-EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+PHONE_REGEX = re.compile(r"^\+[1-9]\d{7,14}$")
 
 router = APIRouter(include_in_schema=False)
 
 
 class PublicDeleteAccountRequest(BaseModel):
-    email: str
-    password: str
+    phone: str
+    code: str
 
 
-def _normalize_email(value: str) -> str:
-    email = (value or "").strip().lower()
-    if not EMAIL_REGEX.match(email):
-        raise HTTPException(status_code=400, detail="invalid_email")
-    return email
+def _normalize_phone(value: str) -> str:
+    cleaned = re.sub(r"[\s\-()]", "", (value or "").strip())
+    if not cleaned.startswith("+"):
+        cleaned = "+" + cleaned.lstrip("+")
+    if not PHONE_REGEX.match(cleaned):
+        raise HTTPException(status_code=400, detail="invalid_phone")
+    return cleaned
 
 
 PRIVACY_POLICY_HTML = f"""<!doctype html>
@@ -74,7 +77,7 @@ PRIVACY_POLICY_HTML = f"""<!doctype html>
 
       <h2>What We Collect</h2>
       <ul>
-        <li>Account data: email, password hash, name, surname, patronymic, phone number.</li>
+        <li>Account data: phone number, name, surname, patronymic.</li>
         <li>App usage data necessary to operate the service: rooms, participants, payment schedule data, payment confirmations.</li>
         <li>Security and service logs: login attempts, OTP requests, refresh sessions, audit events.</li>
         <li>Push notification data, when Firebase Cloud Messaging is enabled: device registration token.</li>
@@ -83,20 +86,20 @@ PRIVACY_POLICY_HTML = f"""<!doctype html>
       <h2>Why We Use Data</h2>
       <ul>
         <li>To create and maintain user accounts.</li>
-        <li>To verify email ownership and protect registration/login flows.</li>
+        <li>To verify phone number ownership and protect login flows via a one-time code delivered through Telegram.</li>
         <li>To operate rooms, payment schedules, and participant flows.</li>
         <li>To secure the service, investigate abuse, and maintain auditability.</li>
         <li>To send service notifications and product messages when enabled.</li>
       </ul>
 
       <h2>How We Share Data</h2>
-      <p>We do not sell personal data. Data may be processed by infrastructure and communication providers strictly to deliver service functionality such as email OTP or push notifications.</p>
+      <p>We do not sell personal data. Data may be processed by infrastructure and communication providers strictly to deliver service functionality, such as Telegram Gateway for one-time login codes or push notifications.</p>
 
       <h2>Retention</h2>
       <p>We retain data only as long as required to operate the service and protect it from abuse. When an account deletion request is completed, the account, authentication data, related memberships, related sessions, and associated personal records are removed. Rooms created by the deleting user may also be removed as part of this process.</p>
 
       <h2>Security</h2>
-      <p>We use HTTPS in production, password hashing, token-based authentication, and audit logging to protect user data and service integrity.</p>
+      <p>We use HTTPS in production, one-time codes instead of stored passwords, token-based authentication, and audit logging to protect user data and service integrity.</p>
 
       <h2>Your Rights</h2>
       <ul>
@@ -175,17 +178,36 @@ DELETE_ACCOUNT_HTML = f"""<!doctype html>
     <div class="card">
       <h1>Delete Account</h1>
       <p>Use this page if you want to request deletion outside the app. This action is irreversible. Rooms created by your account may also be removed.</p>
-      <label>Email
-        <input id="email" type="email" autocomplete="username" />
+      <label>Phone number
+        <input id="phone" type="tel" autocomplete="tel" placeholder="+998901234567" />
       </label>
-      <label>Password
-        <input id="password" type="password" autocomplete="current-password" />
+      <button onclick="sendCode()">Send code via Telegram</button>
+      <label style="margin-top:14px">Code from Telegram
+        <input id="code" type="text" autocomplete="one-time-code" />
       </label>
       <button onclick="submitDeletion()">Delete account</button>
       <div class="status" id="status"></div>
     </div>
   </div>
   <script>
+    async function sendCode() {{
+      const status = document.getElementById('status');
+      status.className = 'status';
+      status.textContent = 'Sending...';
+      try {{
+        const response = await fetch('/auth/phone/start', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ phone: document.getElementById('phone').value }})
+        }});
+        const text = await response.text();
+        if (!response.ok) throw new Error(text || 'Request failed');
+        status.textContent = 'Code sent via Telegram.';
+      }} catch (error) {{
+        status.className = 'status error';
+        status.textContent = error.message;
+      }}
+    }}
     async function submitDeletion() {{
       const status = document.getElementById('status');
       status.className = 'status';
@@ -195,8 +217,8 @@ DELETE_ACCOUNT_HTML = f"""<!doctype html>
           method: 'POST',
           headers: {{ 'Content-Type': 'application/json' }},
           body: JSON.stringify({{
-            email: document.getElementById('email').value,
-            password: document.getElementById('password').value
+            phone: document.getElementById('phone').value,
+            code: document.getElementById('code').value
           }})
         }});
         const text = await response.text();
@@ -224,17 +246,40 @@ def delete_account_page():
 
 @router.post("/legal/delete-account/request")
 def delete_account_public(payload: PublicDeleteAccountRequest, request: Request):
-    email = _normalize_email(payload.email)
-    password = (payload.password or "").strip()
-    if not password:
-        raise HTTPException(status_code=400, detail="password_required")
+    phone = _normalize_phone(payload.phone)
+    code = (payload.code or "").strip()
+    if len(code) < 4:
+        raise HTTPException(status_code=400, detail="invalid_code")
 
     with db_session() as conn:
-        user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-        if user is None or not user["password_hash"]:
+        otp = conn.execute(
+            """
+            SELECT * FROM phone_otp_codes
+            WHERE phone = ? AND used_at IS NULL
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            (phone,),
+        ).fetchone()
+        if otp is None:
+            raise HTTPException(status_code=400, detail="code_not_found")
+        if datetime.utcnow() > datetime.fromisoformat(otp["expires_at"]):
+            raise HTTPException(status_code=400, detail="code_expired")
+        if otp["attempts"] >= otp["max_attempts"]:
+            raise HTTPException(status_code=429, detail="code_attempts_exceeded")
+        if not verify_otp_code(code, otp["code_hash"]):
+            conn.execute(
+                "UPDATE phone_otp_codes SET attempts = attempts + 1 WHERE id = ?",
+                (otp["id"],),
+            )
+            raise HTTPException(status_code=400, detail="code_invalid")
+        conn.execute(
+            "UPDATE phone_otp_codes SET used_at = ? WHERE id = ?",
+            (now_iso(), otp["id"]),
+        )
+
+        user = conn.execute("SELECT * FROM users WHERE phone = ?", (phone,)).fetchone()
+        if user is None:
             raise HTTPException(status_code=404, detail="account_not_found")
-        if not verify_password(password, user["password_hash"]):
-            raise HTTPException(status_code=401, detail="invalid_credentials")
         delete_user_account(conn, user, request=request, source="public_web")
 
     return {"message": "account_deleted"}

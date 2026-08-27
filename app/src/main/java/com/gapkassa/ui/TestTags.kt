@@ -2,12 +2,16 @@ package com.gapkassa.ui
 
 object TestTags {
     const val AuthTitle = "auth_title"
-    const val AuthGoogleButton = "auth_google_button"
-    const val AuthMockGoogleButton = "auth_mock_google_button"
+    const val AuthPhoneField = "auth_phone_field"
+    const val AuthSendCodeButton = "auth_send_code_button"
+    const val AuthCodeField = "auth_code_field"
+    const val AuthVerifyButton = "auth_verify_button"
+    const val AuthMockButton = "auth_mock_button"
 
     const val RoomsTitle = "rooms_title"
     const val RoomsCreateFab = "rooms_create_fab"
     const val RoomsProfileButton = "rooms_profile_button"
+    const val RoomsLanguageButton = "rooms_language_button"
     const val RoomDeleteAction = "room_delete_action"
     const val RoomDeleteConfirm = "room_delete_confirm"
 

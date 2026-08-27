@@ -16,7 +16,7 @@ class TokenStore(context: Context) {
     @Volatile
     private var cachedUserId: String? = null
     @Volatile
-    private var cachedUserEmail: String? = null
+    private var cachedUserPhone: String? = null
     private val prefs: SharedPreferences = runCatching {
         val masterKey = MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
@@ -63,11 +63,11 @@ class TokenStore(context: Context) {
             publishSessionState()
         }
 
-    var userEmail: String?
-        get() = cachedUserEmail ?: prefs.getString(KEY_USER_EMAIL, null)
+    var userPhone: String?
+        get() = cachedUserPhone ?: prefs.getString(KEY_USER_PHONE, null)
         set(value) {
-            cachedUserEmail = value
-            prefs.edit().putString(KEY_USER_EMAIL, value).apply()
+            cachedUserPhone = value
+            prefs.edit().putString(KEY_USER_PHONE, value).apply()
         }
 
     val hasStoredSession: Boolean
@@ -77,17 +77,17 @@ class TokenStore(context: Context) {
         accessToken: String,
         refreshToken: String,
         userId: String,
-        userEmail: String
+        userPhone: String
     ) {
         cachedAccessToken = accessToken
         cachedRefreshToken = refreshToken
         cachedUserId = userId
-        cachedUserEmail = userEmail
+        cachedUserPhone = userPhone
         prefs.edit()
             .putString(KEY_ACCESS, accessToken)
             .putString(KEY_REFRESH, refreshToken)
             .putString(KEY_USER_ID, userId)
-            .putString(KEY_USER_EMAIL, userEmail)
+            .putString(KEY_USER_PHONE, userPhone)
             .apply()
         publishSessionState()
     }
@@ -96,7 +96,7 @@ class TokenStore(context: Context) {
         cachedAccessToken = null
         cachedRefreshToken = null
         cachedUserId = null
-        cachedUserEmail = null
+        cachedUserPhone = null
         prefs.edit().clear().commit()
         publishSessionState()
     }
@@ -117,6 +117,6 @@ class TokenStore(context: Context) {
         const val KEY_ACCESS = "access_token"
         const val KEY_REFRESH = "refresh_token"
         const val KEY_USER_ID = "user_id"
-        const val KEY_USER_EMAIL = "user_email"
+        const val KEY_USER_PHONE = "user_phone"
     }
 }

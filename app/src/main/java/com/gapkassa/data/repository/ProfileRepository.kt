@@ -14,7 +14,7 @@ class ProfileRepository(
     private val api: BackendApi,
     private val profileCacheStore: ProfileCacheStore
 ) {
-    private val emptyProfile = UserProfile("", "", "", "", "", "")
+    private val emptyProfile = UserProfile("", "", "", "", "")
     private val _profile = MutableStateFlow(profileCacheStore.read())
     val profileFlow: StateFlow<UserProfile> = _profile
 
@@ -54,8 +54,7 @@ class ProfileRepository(
         name = name.orEmpty(),
         lastName = lastName.orEmpty(),
         patronymic = patronymic.orEmpty(),
-        email = email,
-        phone = phone.orEmpty(),
+        phone = phone,
         photoUrl = photoUrl.orEmpty()
     )
 }

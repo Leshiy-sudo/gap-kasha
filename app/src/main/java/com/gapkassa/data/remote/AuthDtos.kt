@@ -3,28 +3,13 @@ package com.gapkassa.data.remote
 import com.squareup.moshi.Json
 
 /** Payloads and responses for the local backend. */
-data class RegisterRequest(
-    val email: String,
-    val password: String,
-    val name: String?,
-    @Json(name = "last_name") val lastName: String?,
-    val patronymic: String?,
-    val phone: String?
+data class PhoneAuthStartRequest(
+    val phone: String
 )
 
-data class RegisterVerifyRequest(
-    val email: String,
+data class PhoneAuthVerifyRequest(
+    val phone: String,
     val code: String
-)
-
-data class LoginRequest(
-    val email: String,
-    val password: String
-)
-
-data class GoogleAuthRequest(
-    @Json(name = "id_token") val idToken: String,
-    val nonce: String?
 )
 
 data class RefreshRequest(
@@ -55,7 +40,7 @@ data class ClientErrorReportRequest(
     @Json(name = "device_model") val deviceModel: String,
     @Json(name = "android_version") val androidVersion: String,
     @Json(name = "user_id") val userId: String?,
-    @Json(name = "user_email") val userEmail: String?
+    @Json(name = "user_phone") val userPhone: String?
 )
 
 data class MessageResponse(
@@ -65,11 +50,10 @@ data class MessageResponse(
 
 data class UserDto(
     val id: String,
-    val email: String,
+    val phone: String,
     val name: String?,
     @Json(name = "last_name") val lastName: String?,
     val patronymic: String?,
-    val phone: String?,
     @Json(name = "photo_url") val photoUrl: String?
 )
 
@@ -120,7 +104,7 @@ data class RoomDto(
 )
 
 data class MemberCreateRequest(
-    val email: String,
+    val phone: String,
     val name: String?,
     val role: String?,
     @Json(name = "order_index") val orderIndex: Int?
@@ -128,7 +112,7 @@ data class MemberCreateRequest(
 
 data class MemberDto(
     @Json(name = "user_id") val userId: String,
-    val email: String,
+    val phone: String,
     val name: String?,
     val role: String,
     @Json(name = "order_index") val orderIndex: Int

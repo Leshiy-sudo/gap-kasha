@@ -47,11 +47,11 @@ class RoomViewModel(
         val userMap = users.associateBy { it.id }
         members.map { member ->
             val user = userMap[member.userId]
-            val email = user?.email ?: member.userId
-            val name = user?.name ?: email.substringBefore("@").ifBlank { email }
+            val phone = user?.phone ?: member.userId
+            val name = user?.name?.ifBlank { null } ?: phone
             MemberUi(
                 userId = member.userId,
-                email = email,
+                phone = phone,
                 name = name,
                 role = member.role,
                 orderIndex = member.orderIndex
@@ -171,7 +171,7 @@ data class RoomUiState(
 /** Member entry with resolved profile info for UI. */
 data class MemberUi(
     val userId: String,
-    val email: String,
+    val phone: String,
     val name: String,
     val role: com.gapkassa.data.model.Role,
     val orderIndex: Int

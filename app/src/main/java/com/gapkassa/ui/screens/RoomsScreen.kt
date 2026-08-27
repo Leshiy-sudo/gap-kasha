@@ -30,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,6 +52,7 @@ import com.gapkassa.ui.components.AppCard
 import com.gapkassa.ui.components.AppTopBar
 import com.gapkassa.ui.theme.FintechColors
 import com.gapkassa.ui.theme.FintechSpacing
+import com.gapkassa.utils.findActivity
 import com.gapkassa.viewmodel.RoomItem
 import com.gapkassa.viewmodel.RoomsViewModel
 
@@ -62,8 +64,10 @@ fun RoomsScreen(
     onProfile: () -> Unit
 ) {
     val rooms by viewModel.rooms.collectAsState()
+    val language by viewModel.language.collectAsState()
     var pendingDelete by remember { mutableStateOf<RoomItem?>(null) }
     var deleteError by remember { mutableStateOf<RoomDeleteError?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Scaffold(
         topBar = {
@@ -71,6 +75,15 @@ fun RoomsScreen(
                 title = stringResource(R.string.rooms_title),
                 titleModifier = Modifier.testTag(TestTags.RoomsTitle),
                 actions = {
+                    TextButton(
+                        onClick = {
+                            viewModel.toggleLanguage()
+                            context.findActivity()?.recreate()
+                        },
+                        modifier = Modifier.testTag(TestTags.RoomsLanguageButton)
+                    ) {
+                        Text(language.uppercase())
+                    }
                     IconButton(
                         onClick = onProfile,
                         modifier = Modifier.testTag(TestTags.RoomsProfileButton)

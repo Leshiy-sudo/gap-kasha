@@ -22,11 +22,7 @@ class RemoteConfigRepository(
             cta = "Подключить",
             targetUrl = ""
         ),
-        texts = mapOf(
-            "helper_register_otp" to "Мы отправим код подтверждения на указанный email.",
-            "verification_hint" to "Можно вставить ссылку из письма — приложение извлечёт код.",
-            "message_verification_sent" to "Письмо с кодом отправлено. Проверьте почту."
-        )
+        texts = emptyMap()
     )
 
     private val _config = MutableStateFlow(fallback)

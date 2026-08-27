@@ -2,28 +2,30 @@ package com.gapkassa.auth
 
 /** Fixed identity used by a debug-only quick-login test button. */
 data class TestIdentity(
-    val email: String,
-    val subject: String,
+    val phone: String,
     val displayName: String
 )
 
 /**
  * Five fixed test identities for the debug quick-login screen: one room creator
  * and four room members, so the role model (admin vs member) can be exercised
- * without a real phone/OTP flow.
+ * without waiting on a real Telegram round-trip. These match the backend's
+ * MOCK_TEST_PHONES + MOCK_TEST_CODE (see local-backend/main.py) — the fixed
+ * code "000000" always verifies for these phones when PHONE_AUTH_ALLOW_MOCK is on.
  */
 object TestIdentities {
+    const val MOCK_CODE = "000000"
+
     val CREATOR = TestIdentity(
-        email = "test-creator@gapkassa.test",
-        subject = "test-creator",
+        phone = "+998900000001",
         displayName = "Тестовый создатель"
     )
 
     val MEMBERS = listOf(
-        TestIdentity("test-member1@gapkassa.test", "test-member1", "Тестовый участник 1"),
-        TestIdentity("test-member2@gapkassa.test", "test-member2", "Тестовый участник 2"),
-        TestIdentity("test-member3@gapkassa.test", "test-member3", "Тестовый участник 3"),
-        TestIdentity("test-member4@gapkassa.test", "test-member4", "Тестовый участник 4")
+        TestIdentity("+998900000002", "Тестовый участник 1"),
+        TestIdentity("+998900000003", "Тестовый участник 2"),
+        TestIdentity("+998900000004", "Тестовый участник 3"),
+        TestIdentity("+998900000005", "Тестовый участник 4")
     )
 
     val ALL = listOf(CREATOR) + MEMBERS

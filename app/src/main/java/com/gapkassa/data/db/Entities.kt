@@ -11,7 +11,7 @@ import java.time.LocalDate
 data class UserEntity(
     @PrimaryKey val id: String,
     val name: String,
-    val email: String
+    val phone: String
 )
 
 /** Room table for group rooms and their configuration. */

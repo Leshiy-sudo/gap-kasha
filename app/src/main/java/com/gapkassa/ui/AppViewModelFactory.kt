@@ -26,7 +26,7 @@ class AppViewModelFactory(
             modelClass.isAssignableFrom(AuthViewModel::class.java) ->
                 AuthViewModel(app.authRepository, app.profileRepository, app.roomRepository, handle) as T
             modelClass.isAssignableFrom(RoomsViewModel::class.java) ->
-                RoomsViewModel(app.roomRepository, app.actionLogRepository, app.authRepository) as T
+                RoomsViewModel(app.roomRepository, app.actionLogRepository, app.authRepository, app.settingsRepository) as T
             modelClass.isAssignableFrom(RoomViewModel::class.java) ->
                 RoomViewModel(app.roomRepository, app.actionLogRepository, app.authRepository) as T
             modelClass.isAssignableFrom(CalendarViewModel::class.java) ->

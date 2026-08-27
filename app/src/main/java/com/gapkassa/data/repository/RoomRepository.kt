@@ -114,7 +114,7 @@ class RoomRepository(
 
         val memberRequests = members.mapIndexed { index, user ->
             MemberCreateRequest(
-                email = user.email,
+                phone = user.phone,
                 name = user.name,
                 role = if (user.id == adminId) Role.ADMIN.name else Role.MEMBER.name,
                 orderIndex = index
@@ -140,11 +140,11 @@ class RoomRepository(
      * the "test creator" quick-login button, so the 5 fixed test identities land in one
      * room together with the right admin/member roles. No-op once the room exists.
      */
-    suspend fun ensureFixedTestRoom(creatorEmail: String, memberEmails: List<String>) {
+    suspend fun ensureFixedTestRoom(creatorPhone: String, memberPhones: List<String>) {
         val api = backendApi ?: return
         val existingRooms = api.rooms()
         if (existingRooms.any { it.name == FIXED_TEST_ROOM_NAME }) return
-        val allEmails = listOf(creatorEmail) + memberEmails
+        val allPhones = listOf(creatorPhone) + memberPhones
         createRoom(
             name = FIXED_TEST_ROOM_NAME,
             description = "Комната для тестового входа",
@@ -152,8 +152,8 @@ class RoomRepository(
             paymentDay = 25,
             cycleLength = 6,
             autoRotate = true,
-            members = allEmails.map { email -> UserEntity(id = email, name = "", email = email) },
-            adminId = creatorEmail
+            members = allPhones.map { phone -> UserEntity(id = phone, name = "", phone = phone) },
+            adminId = creatorPhone
         )
     }
 
@@ -162,9 +162,9 @@ class RoomRepository(
         if (roomDao.count() > 0) return
         val demoMembers = (1..10).map { index ->
             UserEntity(
-                id = "demo$index@example.com",
+                id = "+99890000${1000 + index}",
                 name = "Участник $index",
-                email = "demo$index@example.com"
+                phone = "+99890000${1000 + index}"
             )
         }
         createRoom(
@@ -324,11 +324,10 @@ class RoomRepository(
     }
 
     private fun MemberDto.toUserEntity(): UserEntity {
-        val fallbackName = email.substringBefore("@").ifBlank { email }
         return UserEntity(
             id = userId,
-            name = name ?: fallbackName,
-            email = email
+            name = name ?: phone,
+            phone = phone
         )
     }
 

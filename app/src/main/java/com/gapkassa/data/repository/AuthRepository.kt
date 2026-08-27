@@ -2,17 +2,18 @@ package com.gapkassa.data.repository
 
 import com.gapkassa.data.preferences.TokenStore
 import com.gapkassa.data.remote.BackendApi
-import com.gapkassa.data.remote.GoogleAuthRequest
-import com.gapkassa.data.remote.LoginRequest
-import com.gapkassa.data.remote.RegisterRequest
-import com.gapkassa.data.remote.RegisterVerifyRequest
+import com.gapkassa.data.remote.PhoneAuthStartRequest
+import com.gapkassa.data.remote.PhoneAuthVerifyRequest
 import com.gapkassa.data.remote.RefreshRequest
 import com.gapkassa.data.remote.LogoutRequest
 import com.gapkassa.data.remote.AuthResponse
 import com.gapkassa.data.remote.UserDto
 
 /**
- * Authentication gateway backed by the local/remote API.
+ * Authentication gateway backed by the local/remote API. Auth is phone number +
+ * one-time code delivered via Telegram (Telegram Gateway API) — there is no
+ * separate registration step, a first successful code verification creates the
+ * account.
  */
 class AuthRepository(
     private val api: BackendApi,
@@ -25,48 +26,15 @@ class AuthRepository(
     val currentUserId: String?
         get() = tokenStore.userId
 
-    val currentEmail: String?
-        get() = tokenStore.userEmail
+    val currentPhone: String?
+        get() = tokenStore.userPhone
 
-    suspend fun requestRegisterOtp(
-        email: String,
-        password: String,
-        name: String?,
-        lastName: String?,
-        patronymic: String?,
-        phone: String?
-    ): Result<Unit> = runCatching {
-        api.requestRegisterOtp(
-            RegisterRequest(
-                email = email,
-                password = password,
-                name = name,
-                lastName = lastName,
-                patronymic = patronymic,
-                phone = phone
-            )
-        )
+    suspend fun startPhoneAuth(phone: String): Result<Unit> = runCatching {
+        api.startPhoneAuth(PhoneAuthStartRequest(phone))
     }
 
-    suspend fun verifyRegisterOtp(email: String, code: String): Result<UserDto> = runCatching {
-        val response = api.verifyRegisterOtp(RegisterVerifyRequest(email, code))
-        persistAuth(response)
-        response.user
-    }
-
-    suspend fun login(email: String, password: String): Result<UserDto> = runCatching {
-        val response = api.login(LoginRequest(email, password))
-        persistAuth(response)
-        response.user
-    }
-
-    suspend fun loginWithGoogle(idToken: String, nonce: String?): Result<UserDto> = runCatching {
-        val response = api.googleAuth(
-            GoogleAuthRequest(
-                idToken = idToken,
-                nonce = nonce
-            )
-        )
+    suspend fun verifyPhoneAuth(phone: String, code: String): Result<UserDto> = runCatching {
+        val response = api.verifyPhoneAuth(PhoneAuthVerifyRequest(phone, code))
         persistAuth(response)
         response.user
     }
@@ -82,7 +50,7 @@ class AuthRepository(
             accessToken = response.accessToken,
             refreshToken = response.refreshToken,
             userId = response.user.id,
-            userEmail = response.user.email
+            userPhone = response.user.phone
         )
     }
 

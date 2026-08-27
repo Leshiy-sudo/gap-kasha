@@ -37,7 +37,7 @@ abstract class UiFlowTestBase {
     protected fun loginFresh() {
         logoutIfNeeded()
         waitForTag(TestTags.AuthTitle)
-        composeRule.onNodeWithTag(TestTags.AuthMockGoogleButton).performClick()
+        composeRule.onNodeWithTag(TestTags.AuthMockButton).performClick()
         waitForTag(TestTags.RoomsTitle)
         composeRule.onNodeWithTag(TestTags.RoomsTitle).assertIsDisplayed()
     }
@@ -56,13 +56,13 @@ abstract class UiFlowTestBase {
         composeRule.onNodeWithTag(TestTags.CreateRoomName).performTextClearance()
         composeRule.onNodeWithTag(TestTags.CreateRoomName).performTextInput(roomName)
 
-        val emailSuffix = roomName.takeLast(5).lowercase()
+        val phoneSuffix = roomName.filter { it.isDigit() }.takeLast(4).ifBlank { "0000" }
         val participants = listOf(
-            TEST_EMAIL,
-            "m1$emailSuffix@gk.co",
-            "m2$emailSuffix@gk.co",
-            "m3$emailSuffix@gk.co",
-            "m4$emailSuffix@gk.co"
+            TEST_PHONE,
+            "+99891$phoneSuffix" + "1",
+            "+99891$phoneSuffix" + "2",
+            "+99891$phoneSuffix" + "3",
+            "+99891$phoneSuffix" + "4"
         )
         participants.forEach { participant ->
             composeRule.onNodeWithTag(TestTags.CreateRoomParticipants).performTextClearance()
@@ -112,6 +112,6 @@ abstract class UiFlowTestBase {
     }
 
     companion object {
-        const val TEST_EMAIL = "uiqa@example.com"
+        const val TEST_PHONE = "+998910000000"
     }
 }

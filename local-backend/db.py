@@ -32,24 +32,19 @@ def init_db():
             """
             CREATE TABLE IF NOT EXISTS users (
                 id TEXT PRIMARY KEY,
-                email TEXT UNIQUE NOT NULL,
-                auth_provider TEXT NOT NULL DEFAULT 'email',
-                google_sub TEXT,
+                phone TEXT UNIQUE NOT NULL,
                 name TEXT,
                 last_name TEXT,
                 patronymic TEXT,
-                phone TEXT,
                 photo_url TEXT,
-                password_hash TEXT,
-                email_verified INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 is_active INTEGER NOT NULL DEFAULT 1
             );
 
-            CREATE TABLE IF NOT EXISTS otp_codes (
+            CREATE TABLE IF NOT EXISTS phone_otp_codes (
                 id TEXT PRIMARY KEY,
-                email TEXT NOT NULL,
+                phone TEXT NOT NULL,
                 code_hash TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 expires_at TEXT NOT NULL,
@@ -139,17 +134,9 @@ def init_db():
                 created_at TEXT NOT NULL
             );
 
-            CREATE TABLE IF NOT EXISTS email_outbox (
-                id TEXT PRIMARY KEY,
-                recipient TEXT NOT NULL,
-                subject TEXT NOT NULL,
-                body TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            );
-
             CREATE TABLE IF NOT EXISTS login_attempts (
                 id TEXT PRIMARY KEY,
-                email TEXT NOT NULL,
+                phone TEXT NOT NULL,
                 success INTEGER NOT NULL,
                 ip TEXT,
                 user_agent TEXT,
@@ -172,34 +159,23 @@ def init_db():
                 updated_by TEXT,
                 PRIMARY KEY (section, locale, content_key)
             );
-            CREATE INDEX IF NOT EXISTS idx_login_attempts_email_time ON login_attempts(email, created_at);
+            CREATE INDEX IF NOT EXISTS idx_login_attempts_phone_time ON login_attempts(phone, created_at);
             """
         )
         ensure_user_columns(conn)
         ensure_room_columns(conn)
-        conn.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub_unique ON users(google_sub) WHERE google_sub IS NOT NULL"
-        )
         conn.commit()
 
 
 def ensure_user_columns(conn: sqlite3.Connection):
     existing = {row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()}
     alterations = []
-    if "auth_provider" not in existing:
-        alterations.append("ALTER TABLE users ADD COLUMN auth_provider TEXT NOT NULL DEFAULT 'email'")
-    if "google_sub" not in existing:
-        alterations.append("ALTER TABLE users ADD COLUMN google_sub TEXT")
     if "last_name" not in existing:
         alterations.append("ALTER TABLE users ADD COLUMN last_name TEXT")
     if "patronymic" not in existing:
         alterations.append("ALTER TABLE users ADD COLUMN patronymic TEXT")
     if "photo_url" not in existing:
         alterations.append("ALTER TABLE users ADD COLUMN photo_url TEXT")
-    if "password_hash" not in existing:
-        alterations.append("ALTER TABLE users ADD COLUMN password_hash TEXT")
-    if "email_verified" not in existing:
-        alterations.append("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0")
     for stmt in alterations:
         conn.execute(stmt)
 

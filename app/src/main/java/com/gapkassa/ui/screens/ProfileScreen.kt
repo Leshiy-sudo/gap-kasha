@@ -47,7 +47,6 @@ fun ProfileScreen(
     var name by remember(profile) { mutableStateOf(profile.name) }
     var lastName by remember(profile) { mutableStateOf(profile.lastName) }
     var patronymic by remember(profile) { mutableStateOf(profile.patronymic) }
-    var phone by remember(profile) { mutableStateOf(profile.phone) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf<String?>(null) }
 
@@ -90,16 +89,10 @@ fun ProfileScreen(
 
             Text(text = stringResource(R.string.section_contacts), style = MaterialTheme.typography.titleSmall)
             AppOutlinedTextField(
-                value = profile.email,
+                value = profile.phone,
                 onValueChange = {},
-                label = stringResource(R.string.field_email),
-                readOnly = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            AppOutlinedTextField(
-                value = phone,
-                onValueChange = { phone = it },
                 label = stringResource(R.string.field_phone),
+                readOnly = true,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -108,7 +101,7 @@ fun ProfileScreen(
                 text = stringResource(R.string.action_save),
                 onClick = {
                     viewModel.saveProfile(
-                        profile.copy(name = name, lastName = lastName, patronymic = patronymic, phone = phone),
+                        profile.copy(name = name, lastName = lastName, patronymic = patronymic),
                         onDone = {}
                     )
                 }

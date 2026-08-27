@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 import hashlib
@@ -12,7 +13,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from account_service import delete_user_account
-from google_auth import GoogleAuthVerifier, GoogleTokenVerificationError
 from legal_pages import router as legal_router
 from admin_panel import router as admin_router
 from db import db_session, init_db, now_iso
@@ -24,19 +24,27 @@ from security import (
     generate_otp_code,
     generate_refresh_token,
     hash_otp,
-    hash_password,
     refresh_expiry,
-    verify_password,
     verify_otp as verify_otp_code,
+)
+from telegram_gateway import (
+    TelegramGatewayError,
+    TelegramGatewayNotConfigured,
+    check_send_ability,
+    send_verification_code,
 )
 
 APP_ENV = os.getenv("APP_ENV", "local")
 RAW_CORS_ORIGINS = os.getenv("CORS_ORIGINS", "")
-GOOGLE_WEB_CLIENT_ID = os.getenv("GOOGLE_WEB_CLIENT_ID", "").strip()
-GOOGLE_AUTH_ALLOW_MOCK = os.getenv(
-    "GOOGLE_AUTH_ALLOW_MOCK",
+PHONE_AUTH_ALLOW_MOCK = os.getenv(
+    "PHONE_AUTH_ALLOW_MOCK",
     "true" if APP_ENV == "local" else "false",
 ).lower() == "true"
+# Fixed debug-only test identities (see docs/tz-uzbek-localization-phone-auth.md §2.5):
+# these phones + this fixed code always verify successfully without calling the
+# real Telegram Gateway, so QA/automation isn't blocked on real Telegram delivery.
+MOCK_TEST_PHONES = {f"+99890000000{i}" for i in range(1, 6)}
+MOCK_TEST_CODE = "000000"
 OTP_TTL_MIN = int(os.getenv("OTP_TTL_MIN", "10"))
 OTP_COOLDOWN_SEC = int(os.getenv("OTP_COOLDOWN_SEC", "30"))
 OTP_MAX_ATTEMPTS = int(os.getenv("OTP_MAX_ATTEMPTS", "5"))
@@ -50,17 +58,16 @@ CLIENT_ERROR_REPORT_EMAILS = [
 ]
 CLIENT_ERROR_STACKTRACE_MAX_LEN = int(os.getenv("CLIENT_ERROR_STACKTRACE_MAX_LEN", "12000"))
 
-EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+PHONE_REGEX = re.compile(r"^\+[1-9]\d{7,14}$")
 MAX_TEXT_LENGTH = int(os.getenv("MAX_TEXT_LENGTH", "30"))
 MAX_DESCRIPTION_LENGTH = int(os.getenv("MAX_DESCRIPTION_LENGTH", "200"))
-PASSWORD_MIN_LEN = int(os.getenv("PASSWORD_MIN_LEN", "8"))
-PASSWORD_MAX_LEN = int(os.getenv("PASSWORD_MAX_LEN", "30"))
 MIN_MEMBERS_PER_ROOM = int(os.getenv("MIN_MEMBERS_PER_ROOM", "5"))
 MAX_MEMBERS_PER_ROOM = int(os.getenv("MAX_MEMBERS_PER_ROOM", "20"))
 ALLOWED_ROLES = {"ADMIN", "MEMBER"}
 ALLOWED_PAYMENT_STATUSES = {"EXPECTED", "PAID", "SKIPPED", "OVERDUE"}
 
 app = FastAPI(title="GapKassa Local API", version="0.2.0")
+logger = logging.getLogger("gapkassa")
 
 def parse_cors_origins(raw: str) -> List[str]:
     return [origin.strip() for origin in raw.split(",") if origin.strip()]
@@ -85,38 +92,19 @@ app.add_middleware(
 )
 app.include_router(admin_router)
 app.include_router(legal_router)
-google_auth_verifier = GoogleAuthVerifier(
-    web_client_id=GOOGLE_WEB_CLIENT_ID,
-    allow_mock=GOOGLE_AUTH_ALLOW_MOCK,
-)
 
 
 class MessageResponse(BaseModel):
     message: str
 
 
-class RegisterOtpRequest(BaseModel):
-    email: str
-    password: str
-    name: Optional[str] = None
-    last_name: Optional[str] = None
-    patronymic: Optional[str] = None
-    phone: Optional[str] = None
+class PhoneAuthStartRequest(BaseModel):
+    phone: str
 
 
-class RegisterVerifyRequest(BaseModel):
-    email: str
+class PhoneAuthVerifyRequest(BaseModel):
+    phone: str
     code: str
-
-
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-
-class GoogleAuthRequest(BaseModel):
-    id_token: str
-    nonce: Optional[str] = None
 
 
 class RefreshRequest(BaseModel):
@@ -142,7 +130,7 @@ class ProfileUpdate(BaseModel):
 
 
 class MemberInput(BaseModel):
-    email: str
+    phone: str
     name: Optional[str] = None
     role: Optional[str] = None
     order_index: Optional[int] = None
@@ -201,12 +189,12 @@ class ClientErrorReportRequest(BaseModel):
     device_model: str
     android_version: str
     user_id: Optional[str] = None
-    user_email: Optional[str] = None
+    user_phone: Optional[str] = None
 
 
-def validate_email(email: str):
-    if not EMAIL_REGEX.match(email):
-        raise HTTPException(status_code=400, detail="invalid_email")
+def validate_phone(phone: str):
+    if not PHONE_REGEX.match(phone):
+        raise HTTPException(status_code=400, detail="invalid_phone")
 
 
 def validate_text_length(value: Optional[str], field: str):
@@ -253,35 +241,22 @@ def normalize_required_name(value: Optional[str]) -> str:
     return normalized
 
 
-def normalize_email(email: str) -> str:
-    email = email.strip().lower()
-    validate_text_length(email, "email")
-    validate_email(email)
-    return email
-
-
-def split_google_name(full_name: Optional[str], given_name: Optional[str], family_name: Optional[str]):
-    first_name = normalize_person_name(given_name)
-    last_name = normalize_person_name(family_name)
-    if first_name is not None or last_name is not None:
-        return first_name, last_name
-    normalized_full_name = normalize_optional(full_name)
-    if normalized_full_name is None:
-        return None, None
-    parts = normalized_full_name.split()
-    if len(parts) == 1:
-        return normalize_person_name(parts[0]), None
-    return normalize_person_name(parts[0]), normalize_person_name(" ".join(parts[1:]))
+def normalize_phone(phone: str) -> str:
+    cleaned = re.sub(r"[\s\-()]", "", phone.strip())
+    if not cleaned.startswith("+"):
+        cleaned = "+" + cleaned.lstrip("+")
+    validate_text_length(cleaned, "phone")
+    validate_phone(cleaned)
+    return cleaned
 
 
 def serialize_user(row):
     return {
         "id": row["id"],
-        "email": row["email"],
+        "phone": row["phone"],
         "name": row["name"],
         "last_name": row["last_name"],
         "patronymic": row["patronymic"],
-        "phone": row["phone"],
         "photo_url": row["photo_url"],
     }
 
@@ -310,7 +285,7 @@ def build_client_error_email_body(payload: ClientErrorReportRequest, request: Re
         f"device_model: {payload.device_model}",
         f"android_version: {payload.android_version}",
         f"user_id: {payload.user_id or '-'}",
-        f"user_email: {payload.user_email or '-'}",
+        f"user_phone: {payload.user_phone or '-'}",
         f"ip: {request.client.host if request.client else '-'}",
         f"user_agent: {request.headers.get('user-agent', '-')}",
     ]
@@ -363,17 +338,17 @@ def log_event(conn, actor_id, action, entity_type, entity_id, before, after, req
     )
 
 
-def login_locked_until(conn, email: str) -> Optional[datetime]:
+def login_locked_until(conn, phone: str) -> Optional[datetime]:
     window_minutes = get_setting_int("login_lockout_min", LOGIN_LOCKOUT_MIN, conn)
     max_attempts = get_setting_int("login_max_attempts", LOGIN_MAX_ATTEMPTS, conn)
     row = conn.execute(
         """
         SELECT created_at FROM login_attempts
-        WHERE email = ? AND success = 0 AND created_at >= ?
+        WHERE phone = ? AND success = 0 AND created_at >= ?
         ORDER BY created_at DESC
         """,
         (
-            email,
+            phone,
             (datetime.utcnow() - timedelta(minutes=window_minutes)).isoformat(),
         ),
     ).fetchall()
@@ -385,15 +360,15 @@ def login_locked_until(conn, email: str) -> Optional[datetime]:
     return None
 
 
-def log_login_attempt(conn, email: str, success: bool, request: Request):
+def log_login_attempt(conn, phone: str, success: bool, request: Request):
     conn.execute(
         """
-        INSERT INTO login_attempts (id, email, success, ip, user_agent, created_at)
+        INSERT INTO login_attempts (id, phone, success, ip, user_agent, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
         """,
         (
             str(uuid4()),
-            email,
+            phone,
             1 if success else 0,
             request.client.host if request.client else None,
             request.headers.get("user-agent"),
@@ -427,100 +402,6 @@ def create_auth_session_tokens(conn, user_id: str, request: Request):
     return access_token, refresh_token
 
 
-def upsert_google_user(conn, identity, request: Request):
-    google_row = conn.execute(
-        "SELECT * FROM users WHERE google_sub = ?",
-        (identity.subject,),
-    ).fetchone()
-    email_row = conn.execute(
-        "SELECT * FROM users WHERE email = ?",
-        (identity.email,),
-    ).fetchone()
-
-    if google_row is not None and email_row is not None and google_row["id"] != email_row["id"]:
-        raise HTTPException(status_code=409, detail="google_email_conflict")
-
-    target = google_row or email_row
-    google_name, google_last_name = split_google_name(
-        identity.full_name,
-        identity.given_name,
-        identity.family_name,
-    )
-    now_str = now_iso()
-
-    if target is None:
-        user_id = str(uuid4())
-        conn.execute(
-            """
-            INSERT INTO users (
-                id, email, auth_provider, google_sub, name, last_name, patronymic, phone,
-                photo_url, password_hash, email_verified, created_at, updated_at, is_active
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                user_id,
-                identity.email,
-                "google",
-                identity.subject,
-                google_name,
-                google_last_name,
-                None,
-                None,
-                identity.picture,
-                None,
-                1,
-                now_str,
-                now_str,
-                1,
-            ),
-        )
-        created = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-        log_event(
-            conn,
-            user_id,
-            "user.create",
-            "user",
-            user_id,
-            None,
-            {
-                "email": identity.email,
-                "auth_provider": "google",
-            },
-            request,
-        )
-        return created
-
-    before = dict(target)
-    merged_name = google_name or target["name"]
-    merged_last_name = google_last_name or target["last_name"]
-    merged_photo_url = identity.picture or target["photo_url"]
-    merged_email_verified = 1 if identity.email_verified else target["email_verified"]
-    conn.execute(
-        """
-        UPDATE users
-        SET email = ?, auth_provider = ?, google_sub = ?, name = ?, last_name = ?, photo_url = ?,
-            email_verified = ?, updated_at = ?
-        WHERE id = ?
-        """,
-        (
-            identity.email,
-            "google",
-            identity.subject,
-            merged_name,
-            merged_last_name,
-            merged_photo_url,
-            merged_email_verified,
-            now_str,
-            target["id"],
-        ),
-    )
-    updated = conn.execute("SELECT * FROM users WHERE id = ?", (target["id"],)).fetchone()
-    if dict(updated) != before:
-        log_event(conn, target["id"], "user.update", "user", target["id"], before, dict(updated), request)
-    return updated
-
-
 def get_current_user(request: Request):
     auth_header = request.headers.get("authorization")
     if not auth_header or not auth_header.lower().startswith("bearer "):
@@ -539,8 +420,6 @@ def get_current_user(request: Request):
         row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     if row is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="user_not_found")
-    if row["email_verified"] != 1:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="email_not_verified")
     if row["is_active"] != 1:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user_inactive")
     return dict(row)
@@ -618,7 +497,7 @@ def serialize_room(row):
 def serialize_member(row):
     return {
         "user_id": row["user_id"],
-        "email": row["email"],
+        "phone": row["phone"],
         "name": row["name"],
         "role": row["role"],
         "order_index": row["order_index"],
@@ -638,8 +517,8 @@ def serialize_payment(row):
     }
 
 
-def upsert_user(conn, email: str, name: Optional[str], request: Request):
-    row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+def upsert_user(conn, phone: str, name: Optional[str], request: Request):
+    row = conn.execute("SELECT * FROM users WHERE phone = ?", (phone,)).fetchone()
     if row is not None:
         if name and not row["name"]:
             before = dict(row)
@@ -656,13 +535,13 @@ def upsert_user(conn, email: str, name: Optional[str], request: Request):
     now_str = now_iso()
     conn.execute(
         """
-        INSERT INTO users (id, email, name, last_name, patronymic, phone, photo_url, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (id, phone, name, last_name, patronymic, photo_url, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (user_id, email, name, None, None, None, None, now_str, now_str),
+        (user_id, phone, name, None, None, None, now_str, now_str),
     )
     user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-    log_event(conn, user_id, "user.create", "user", user_id, None, {"email": email}, request)
+    log_event(conn, user_id, "user.create", "user", user_id, None, {"phone": phone}, request)
     return dict(user)
 
 
@@ -676,142 +555,56 @@ def health():
     return {"status": "ok"}
 
 
-@app.post("/auth/google", response_model=AuthResponse)
-def google_auth(payload: GoogleAuthRequest, request: Request):
-    try:
-        identity = google_auth_verifier.verify(payload.id_token, payload.nonce)
-    except GoogleTokenVerificationError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.code)
-
-    identity.email = normalize_email(identity.email)
-    if not identity.email_verified:
-        raise HTTPException(status_code=403, detail="google_email_not_verified")
-
-    with db_session() as conn:
-        user = upsert_google_user(conn, identity, request)
-        if user["is_active"] != 1:
-            raise HTTPException(status_code=403, detail="user_inactive")
-
-        access_token, refresh_token = create_auth_session_tokens(conn, user["id"], request)
-        log_login_attempt(conn, user["email"], True, request)
-        log_event(
-            conn,
-            user["id"],
-            "auth.google.login",
-            "auth",
-            None,
-            None,
-            {
-                "email": user["email"],
-                "google_sub": user["google_sub"],
-            },
-            request,
-        )
-
-    return AuthResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user=serialize_user(user),
-    )
-
-
-@app.post("/auth/request-otp", response_model=MessageResponse)
-def request_register_otp(payload: RegisterOtpRequest, request: Request):
-    email = normalize_email(payload.email)
-    validate_password(payload.password)
-    name = normalize_required_name(payload.name)
-    last_name = normalize_person_name(payload.last_name)
-    patronymic = normalize_person_name(payload.patronymic)
-    phone = normalize_optional(payload.phone)
-    validate_text_length(name, "name")
-    validate_text_length(last_name, "last_name")
-    validate_text_length(patronymic, "patronymic")
-    validate_text_length(phone, "phone")
-
+@app.post("/auth/phone/start", response_model=MessageResponse)
+def start_phone_auth(payload: PhoneAuthStartRequest, request: Request):
+    phone = normalize_phone(payload.phone)
     now = datetime.utcnow()
     otp_id = str(uuid4())
+
     with db_session() as conn:
         otp_cooldown_sec = get_setting_int("otp_cooldown_sec", OTP_COOLDOWN_SEC, conn)
         otp_ttl_min = get_setting_int("otp_ttl_min", OTP_TTL_MIN, conn)
         otp_max_attempts = get_setting_int("otp_max_attempts", OTP_MAX_ATTEMPTS, conn)
         max_daily_otp_requests = get_setting_int("max_daily_otp_requests", MAX_DAILY_OTP_REQUESTS, conn)
         daily_count = conn.execute(
-            "SELECT COUNT(*) AS count FROM otp_codes WHERE created_at >= ?",
+            "SELECT COUNT(*) AS count FROM phone_otp_codes WHERE created_at >= ?",
             ((now - timedelta(hours=24)).isoformat(),),
         ).fetchone()
         if daily_count and daily_count["count"] >= max_daily_otp_requests:
             raise HTTPException(status_code=429, detail="otp_daily_limit")
         latest = conn.execute(
-            "SELECT created_at FROM otp_codes WHERE email = ? ORDER BY created_at DESC LIMIT 1",
-            (email,),
+            "SELECT created_at FROM phone_otp_codes WHERE phone = ? ORDER BY created_at DESC LIMIT 1",
+            (phone,),
         ).fetchone()
         if latest:
             last_created = datetime.fromisoformat(latest["created_at"])
             if (now - last_created).total_seconds() < otp_cooldown_sec:
                 raise HTTPException(status_code=429, detail="otp_cooldown")
 
-        user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-        if user is not None and user["email_verified"] == 1:
-            raise HTTPException(status_code=409, detail="email_exists")
-
-        password_hash = hash_password(payload.password)
-        now_str = now_iso()
-        if user is None:
-            user_id = str(uuid4())
-            conn.execute(
-                """
-                INSERT INTO users (
-                    id, email, name, last_name, patronymic, phone, photo_url, password_hash, email_verified, created_at, updated_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    user_id,
-                    email,
-                    name,
-                    last_name,
-                    patronymic,
-                    phone,
-                    None,
-                    password_hash,
-                    0,
-                    now_str,
-                    now_str,
-                ),
-            )
-            log_event(conn, user_id, "user.create", "user", user_id, None, {"email": email}, request)
-            actor_id = user_id
+        if PHONE_AUTH_ALLOW_MOCK and phone in MOCK_TEST_PHONES:
+            code = MOCK_TEST_CODE
         else:
-            before = dict(user)
-            conn.execute(
-                """
-                UPDATE users
-                SET name = ?, last_name = ?, patronymic = ?, phone = ?, password_hash = ?, email_verified = 0, updated_at = ?
-                WHERE id = ?
-                """,
-                (
-                    name if name is not None else user["name"],
-                    last_name if last_name is not None else user["last_name"],
-                    patronymic if patronymic is not None else user["patronymic"],
-                    phone if phone is not None else user["phone"],
-                    password_hash,
-                    now_str,
-                    user["id"],
-                ),
-            )
-            updated = conn.execute("SELECT * FROM users WHERE id = ?", (user["id"],)).fetchone()
-            log_event(conn, user["id"], "user.update", "user", user["id"], before, dict(updated), request)
-            actor_id = user["id"]
+            code = generate_otp_code()
+            try:
+                if not check_send_ability(phone):
+                    raise HTTPException(status_code=400, detail="telegram_not_found")
+                send_verification_code(phone, code, ttl_seconds=otp_ttl_min * 60)
+            except TelegramGatewayNotConfigured:
+                if not PHONE_AUTH_ALLOW_MOCK:
+                    raise HTTPException(status_code=503, detail="telegram_gateway_not_configured")
+                # Local/dev without a Gateway token yet: log instead of sending for real.
+                logger.warning("Telegram Gateway not configured; OTP for %s is %s", phone, code)
+            except TelegramGatewayError as exc:
+                raise HTTPException(status_code=502, detail=exc.code) from exc
 
-        code = generate_otp_code()
         conn.execute(
             """
-            INSERT INTO otp_codes (id, email, code_hash, created_at, expires_at, attempts, max_attempts, ip, user_agent)
+            INSERT INTO phone_otp_codes (id, phone, code_hash, created_at, expires_at, attempts, max_attempts, ip, user_agent)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 otp_id,
-                email,
+                phone,
                 hash_otp(code),
                 now.isoformat(),
                 (now + timedelta(minutes=otp_ttl_min)).isoformat(),
@@ -821,49 +614,33 @@ def request_register_otp(payload: RegisterOtpRequest, request: Request):
                 request.headers.get("user-agent"),
             ),
         )
-        log_event(conn, actor_id, "auth.register.request_otp", "auth", None, None, {"email": email}, request)
-
-    try:
-        send_email(
-            recipient=email,
-            subject="Ваш код подтверждения",
-            body=f"Ваш код: {code}\nОн действителен {otp_ttl_min} минут.",
-        )
-    except Exception as exc:
-        with db_session() as conn:
-            conn.execute("DELETE FROM otp_codes WHERE id = ?", (otp_id,))
-            log_event(
-                conn,
-                actor_id,
-                "auth.otp_email_failed",
-                "auth",
-                None,
-                None,
-                {"email": email, "error": str(exc)},
-                request,
-            )
-        raise HTTPException(status_code=502, detail="otp_delivery_failed")
+        log_event(conn, None, "auth.phone.start", "auth", None, None, {"phone": phone}, request)
 
     return MessageResponse(message="otp_sent")
 
 
-@app.post("/auth/verify-otp", response_model=AuthResponse)
-def verify_register_otp(payload: RegisterVerifyRequest, request: Request):
-    email = normalize_email(payload.email)
+@app.post("/auth/phone/verify", response_model=AuthResponse)
+def verify_phone_auth(payload: PhoneAuthVerifyRequest, request: Request):
+    phone = normalize_phone(payload.phone)
     code = payload.code.strip()
     if len(code) < 4:
         raise HTTPException(status_code=400, detail="invalid_code")
 
     with db_session() as conn:
+        locked_until = login_locked_until(conn, phone)
+        if locked_until:
+            raise HTTPException(status_code=429, detail="login_locked")
+
         otp = conn.execute(
             """
-            SELECT * FROM otp_codes
-            WHERE email = ? AND used_at IS NULL
+            SELECT * FROM phone_otp_codes
+            WHERE phone = ? AND used_at IS NULL
             ORDER BY created_at DESC LIMIT 1
             """,
-            (email,),
+            (phone,),
         ).fetchone()
         if otp is None:
+            log_login_attempt(conn, phone, False, request)
             raise HTTPException(status_code=400, detail="code_not_found")
         if datetime.utcnow() > datetime.fromisoformat(otp["expires_at"]):
             raise HTTPException(status_code=400, detail="code_expired")
@@ -872,72 +649,35 @@ def verify_register_otp(payload: RegisterVerifyRequest, request: Request):
 
         if not verify_otp_code(code, otp["code_hash"]):
             conn.execute(
-                "UPDATE otp_codes SET attempts = attempts + 1 WHERE id = ?",
+                "UPDATE phone_otp_codes SET attempts = attempts + 1 WHERE id = ?",
                 (otp["id"],),
             )
+            log_login_attempt(conn, phone, False, request)
             conn.commit()
             raise HTTPException(status_code=400, detail="code_invalid")
 
         conn.execute(
-            "UPDATE otp_codes SET used_at = ? WHERE id = ?",
+            "UPDATE phone_otp_codes SET used_at = ? WHERE id = ?",
             (now_iso(), otp["id"]),
         )
 
-        user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+        user = conn.execute("SELECT * FROM users WHERE phone = ?", (phone,)).fetchone()
+        now_str = now_iso()
         if user is None:
-            raise HTTPException(status_code=400, detail="user_not_found")
-        if user["email_verified"] == 1:
-            raise HTTPException(status_code=409, detail="already_verified")
-        if not user["password_hash"]:
-            raise HTTPException(status_code=400, detail="password_missing")
-
-        conn.execute(
-            "UPDATE users SET email_verified = 1, updated_at = ? WHERE id = ?",
-            (now_iso(), user["id"]),
-        )
-        user = conn.execute("SELECT * FROM users WHERE id = ?", (user["id"],)).fetchone()
-
-        access_token, refresh_token = create_auth_session_tokens(conn, user["id"], request)
-        log_event(conn, user["id"], "auth.register.verify", "auth", None, None, {"email": email}, request)
-
-    return AuthResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user=serialize_user(user),
-    )
-
-
-@app.post("/auth/login", response_model=AuthResponse)
-def login(payload: LoginRequest, request: Request):
-    email = normalize_email(payload.email)
-    if not payload.password:
-        raise HTTPException(status_code=400, detail="password_required")
-
-    with db_session() as conn:
-        locked_until = login_locked_until(conn, email)
-        if locked_until:
-            raise HTTPException(status_code=429, detail="login_locked")
-        user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-        if user is None or not user["password_hash"]:
-            log_login_attempt(conn, email, False, request)
-            conn.commit()
-            raise HTTPException(status_code=401, detail="invalid_credentials")
-        if user["email_verified"] != 1:
-            log_login_attempt(conn, email, False, request)
-            conn.commit()
-            raise HTTPException(status_code=403, detail="email_not_verified")
-        if user["is_active"] != 1:
-            log_login_attempt(conn, email, False, request)
-            conn.commit()
+            user_id = str(uuid4())
+            conn.execute(
+                "INSERT INTO users (id, phone, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                (user_id, phone, now_str, now_str),
+            )
+            log_event(conn, user_id, "user.create", "user", user_id, None, {"phone": phone}, request)
+            user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        elif user["is_active"] != 1:
+            log_login_attempt(conn, phone, False, request)
             raise HTTPException(status_code=403, detail="user_inactive")
-        if not verify_password(payload.password, user["password_hash"]):
-            log_login_attempt(conn, email, False, request)
-            conn.commit()
-            raise HTTPException(status_code=401, detail="invalid_credentials")
 
         access_token, refresh_token = create_auth_session_tokens(conn, user["id"], request)
-        log_login_attempt(conn, email, True, request)
-        log_event(conn, user["id"], "auth.login", "auth", None, None, {"email": email}, request)
+        log_login_attempt(conn, phone, True, request)
+        log_event(conn, user["id"], "auth.phone.verify", "auth", None, None, {"phone": phone}, request)
 
     return AuthResponse(
         access_token=access_token,
@@ -969,8 +709,6 @@ def refresh_token(payload: RefreshRequest, request: Request):
         user = conn.execute("SELECT * FROM users WHERE id = ?", (row["user_id"],)).fetchone()
         if user is None:
             raise HTTPException(status_code=401, detail="user_not_found")
-        if user["email_verified"] != 1:
-            raise HTTPException(status_code=403, detail="email_not_verified")
         if user["is_active"] != 1:
             raise HTTPException(status_code=403, detail="user_inactive")
 
@@ -1064,7 +802,7 @@ def report_client_error(payload: ClientErrorReportRequest, request: Request):
         device_model=trim_report_text(payload.device_model, 120) or "-",
         android_version=trim_report_text(payload.android_version, 40) or "-",
         user_id=trim_report_text(payload.user_id, 120),
-        user_email=trim_report_text(payload.user_email, 200),
+        user_phone=trim_report_text(payload.user_phone, 40),
     )
 
     with db_session() as conn:
@@ -1080,7 +818,7 @@ def report_client_error(payload: ClientErrorReportRequest, request: Request):
                 "app_version": sanitized.app_version,
                 "package_name": sanitized.package_name,
                 "user_id": sanitized.user_id,
-                "user_email": sanitized.user_email,
+                "user_phone": sanitized.user_phone,
             },
             request,
         )
@@ -1102,7 +840,7 @@ def report_client_error(payload: ClientErrorReportRequest, request: Request):
 def me(current_user: dict = Depends(get_current_user)):
     return {
         "id": current_user["id"],
-        "email": current_user["email"],
+        "phone": current_user["phone"],
         "name": current_user["name"],
         "last_name": current_user["last_name"],
         "patronymic": current_user["patronymic"],
@@ -1143,11 +881,10 @@ def update_me(payload: ProfileUpdate, request: Request, current_user: dict = Dep
 
     return {
         "id": user["id"],
-        "email": user["email"],
+        "phone": user["phone"],
         "name": user["name"],
         "last_name": user["last_name"],
         "patronymic": user["patronymic"],
-        "phone": user["phone"],
         "photo_url": user["photo_url"],
     }
 
@@ -1206,10 +943,10 @@ def create_room(payload: RoomCreate, request: Request, current_user: dict = Depe
         members_payload = []
         member_ids = []
         for index, member in enumerate(payload.members):
-            email = normalize_email(member.email)
+            phone = normalize_phone(member.phone)
             validate_text_length(member.name, "member_name")
             name = member.name.strip() if member.name else None
-            user = upsert_user(conn, email, name, request)
+            user = upsert_user(conn, phone, name, request)
             role = normalize_role(member.role, "ADMIN" if index == 0 else "MEMBER")
             order_index = member.order_index if member.order_index is not None else index
             conn.execute(
@@ -1222,7 +959,7 @@ def create_room(payload: RoomCreate, request: Request, current_user: dict = Depe
             members_payload.append(
                 {
                     "user_id": user["id"],
-                    "email": user["email"],
+                    "phone": user["phone"],
                     "name": user["name"],
                     "role": role,
                     "order_index": order_index,
@@ -1403,7 +1140,7 @@ def get_room(room_id: str, current_user: dict = Depends(get_current_user)):
         members = conn.execute(
             """
             SELECT room_members.user_id, room_members.role, room_members.order_index,
-                   users.email, users.name
+                   users.phone, users.name
             FROM room_members
             JOIN users ON users.id = room_members.user_id
             WHERE room_members.room_id = ?
@@ -1430,7 +1167,7 @@ def room_members(room_id: str, current_user: dict = Depends(get_current_user)):
         members = conn.execute(
             """
             SELECT room_members.user_id, room_members.role, room_members.order_index,
-                   users.email, users.name
+                   users.phone, users.name
             FROM room_members
             JOIN users ON users.id = room_members.user_id
             WHERE room_members.room_id = ?

@@ -89,7 +89,7 @@ class ApiClient(tokenStore: TokenStore) {
                 accessToken = body.accessToken,
                 refreshToken = body.refreshToken,
                 userId = body.user.id,
-                userEmail = body.user.email
+                userPhone = body.user.phone
             )
             response.request.newBuilder()
                 .header("Authorization", "Bearer ${body.accessToken}")

@@ -2,7 +2,6 @@ package com.gapkassa
 
 import android.app.Application
 import com.gapkassa.BuildConfig
-import com.gapkassa.auth.GoogleAuthManager
 import com.gapkassa.data.db.AppDatabase
 import com.gapkassa.data.preferences.AppConfigStore
 import com.gapkassa.data.preferences.PendingCrashReportStore
@@ -109,9 +108,7 @@ class GapKassaApp : Application() {
     }
 
     fun onSignedOut() {
-        appScope.launch {
-            GoogleAuthManager(applicationContext).clearCredentialState()
-        }
+        // No provider-side credential state to clear with phone+Telegram auth.
     }
 
     private fun installFatalCrashHandler() {

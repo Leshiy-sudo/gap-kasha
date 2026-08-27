@@ -26,7 +26,7 @@ data class PendingCrashReport(
     val deviceModel: String,
     val androidVersion: String,
     val userId: String?,
-    val userEmail: String?
+    val userPhone: String?
 ) {
     fun toRequest(): ClientErrorReportRequest = ClientErrorReportRequest(
         kind = kind,
@@ -43,7 +43,7 @@ data class PendingCrashReport(
         deviceModel = deviceModel,
         androidVersion = androidVersion,
         userId = userId,
-        userEmail = userEmail
+        userPhone = userPhone
     )
 
     fun toJson(): String = JSONObject().apply {
@@ -61,7 +61,7 @@ data class PendingCrashReport(
         put("device_model", deviceModel)
         put("android_version", androidVersion)
         put("user_id", userId)
-        put("user_email", userEmail)
+        put("user_phone", userPhone)
     }.toString()
 
     companion object {
@@ -88,7 +88,7 @@ data class PendingCrashReport(
                 deviceModel = Build.MODEL.orEmpty(),
                 androidVersion = Build.VERSION.RELEASE.orEmpty(),
                 userId = tokenStore.userId,
-                userEmail = tokenStore.userEmail
+                userPhone = tokenStore.userPhone
             )
         }
 
@@ -109,7 +109,7 @@ data class PendingCrashReport(
                 deviceModel = json.optString("device_model"),
                 androidVersion = json.optString("android_version"),
                 userId = json.optString("user_id").ifBlank { null },
-                userEmail = json.optString("user_email").ifBlank { null }
+                userPhone = json.optString("user_phone").ifBlank { null }
             )
         }.getOrNull()
     }

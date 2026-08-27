@@ -36,27 +36,7 @@ android {
                 "API_BASE_URL",
                 "\"${gradleOrEnv("GAPKASSA_DEBUG_API_URL", "http://10.0.2.2:8080/")}\""
             )
-            buildConfigField(
-                "String",
-                "GOOGLE_WEB_CLIENT_ID",
-                "\"${gradleOrEnv("GAPKASSA_GOOGLE_WEB_CLIENT_ID", "")}\""
-            )
-            buildConfigField("boolean", "GOOGLE_AUTH_ALLOW_MOCK", "true")
-            buildConfigField(
-                "String",
-                "GOOGLE_AUTH_MOCK_EMAIL",
-                "\"${gradleOrEnv("GAPKASSA_GOOGLE_MOCK_EMAIL", "uiqa@example.com")}\""
-            )
-            buildConfigField(
-                "String",
-                "GOOGLE_AUTH_MOCK_NAME",
-                "\"${gradleOrEnv("GAPKASSA_GOOGLE_MOCK_NAME", "Uiqa")}\""
-            )
-            buildConfigField(
-                "String",
-                "GOOGLE_AUTH_MOCK_SUBJECT",
-                "\"${gradleOrEnv("GAPKASSA_GOOGLE_MOCK_SUBJECT", "android-ui-test")}\""
-            )
+            buildConfigField("boolean", "PHONE_AUTH_ALLOW_MOCK", "true")
         }
         release {
             isMinifyEnabled = false
@@ -65,15 +45,7 @@ android {
                 "API_BASE_URL",
                 "\"${gradleOrEnv("GAPKASSA_RELEASE_API_URL", "https://api.gapkassa.invalid/")}\""
             )
-            buildConfigField(
-                "String",
-                "GOOGLE_WEB_CLIENT_ID",
-                "\"${gradleOrEnv("GAPKASSA_GOOGLE_WEB_CLIENT_ID", "")}\""
-            )
-            buildConfigField("boolean", "GOOGLE_AUTH_ALLOW_MOCK", "false")
-            buildConfigField("String", "GOOGLE_AUTH_MOCK_EMAIL", "\"\"")
-            buildConfigField("String", "GOOGLE_AUTH_MOCK_NAME", "\"\"")
-            buildConfigField("String", "GOOGLE_AUTH_MOCK_SUBJECT", "\"\"")
+            buildConfigField("boolean", "PHONE_AUTH_ALLOW_MOCK", "false")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -128,9 +100,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.tracing:tracing:1.2.0")
-    implementation("androidx.credentials:credentials:1.5.0")
-    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")

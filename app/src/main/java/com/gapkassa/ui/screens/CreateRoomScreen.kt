@@ -69,7 +69,7 @@ fun CreateRoomScreen(
     val cycleLength = cycleLengthText.toIntOrNull()
     val cycleLengthError = showValidation && (cycleLength == null || cycleLength !in 1..60)
     val participantsError = showValidation && participants.size !in 5..20
-    val participantsEmailError = showValidation && participants.any { !Validators.isEmailValid(it) }
+    val participantsPhoneError = showValidation && participants.any { !Validators.isPhoneValid(it) }
 
     Scaffold(
         topBar = {
@@ -154,14 +154,14 @@ fun CreateRoomScreen(
                     value = participantInput,
                     onValueChange = { participantInput = it },
                     label = stringResource(R.string.field_participants),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.weight(1f).testTag(TestTags.CreateRoomParticipants)
                 )
                 IconButton(
                     onClick = {
-                        val email = participantInput.trim().lowercase()
-                        if (email.isNotBlank() && email !in participants) {
-                            participants.add(email)
+                        val phone = participantInput.trim()
+                        if (phone.isNotBlank() && phone !in participants) {
+                            participants.add(phone)
                         }
                         participantInput = ""
                     },
@@ -177,21 +177,21 @@ fun CreateRoomScreen(
                     color = MaterialTheme.colorScheme.error
                 )
             }
-            if (participantsEmailError) {
+            if (participantsPhoneError) {
                 Text(
-                    text = stringResource(R.string.error_participants_email),
+                    text = stringResource(R.string.error_participants_phone),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
             }
-            participants.forEach { email ->
+            participants.forEach { phone ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = email, style = MaterialTheme.typography.bodyMedium)
-                    IconButton(onClick = { participants.remove(email) }) {
+                    Text(text = phone, style = MaterialTheme.typography.bodyMedium)
+                    IconButton(onClick = { participants.remove(phone) }) {
                         Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_cancel))
                     }
                 }
@@ -205,7 +205,7 @@ fun CreateRoomScreen(
                 onClick = {
                     showValidation = true
                     if (!nameError && !descriptionError && !amountError && !paymentDayError &&
-                        !cycleLengthError && !participantsError && !participantsEmailError &&
+                        !cycleLengthError && !participantsError && !participantsPhoneError &&
                         amount != null && paymentDay != null && cycleLength != null
                     ) {
                         viewModel.createRoom(
@@ -215,7 +215,7 @@ fun CreateRoomScreen(
                             paymentDay = paymentDay,
                             cycleLength = cycleLength,
                             autoRotate = autoRotate,
-                            participantEmails = participants.toList(),
+                            participantPhones = participants.toList(),
                             onCreated = { onCreated() }
                         )
                     }
